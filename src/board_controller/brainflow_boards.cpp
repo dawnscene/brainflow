@@ -63,7 +63,9 @@ BrainFlowBoards::BrainFlowBoards()
             {"42", json::object()},
             {"44", json::object()},
             {"45", json::object()},
-            {"46", json::object()}
+            {"46", json::object()},
+            {"47", json::object()},
+            {"48", json::object()}
         }
     }};
 
@@ -865,6 +867,16 @@ BrainFlowBoards::BrainFlowBoards()
         {"eda_channels", {1}},
         {"temperature_channels", {2}},
         {"other_channels", {3}}
+    };
+    brainflow_boards_json["boards"]["48"]["default"] =
+    {
+        {"name", "DawnEEG"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 33},
+        {"marker_channel", 34},
+        {"num_rows", 35},
+        {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}}
     };
 }
 

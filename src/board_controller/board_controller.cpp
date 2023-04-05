@@ -48,6 +48,7 @@
 #include "streaming_board.h"
 #include "synthetic_board.h"
 #include "unicorn_board.h"
+#include "dawneeg.h"
 
 #include "json.hpp"
 
@@ -243,6 +244,9 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
             break;
         case BoardIds::EMOTIBIT_BOARD:
             board = std::shared_ptr<Board> (new Emotibit (params));
+            break;
+        case BoardIds::DAWNEEG_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG (params));
             break;
         default:
             return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
