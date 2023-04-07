@@ -1,13 +1,27 @@
+#include <fstream>
+#include <iostream>
+#include <numeric>
+#include <stdint.h>
 #include <string.h>
 
-#include "dawneeg.h"
-#include "serial.h"
-#include "timestamp.h"
 #include "custom_cast.h"
+#include "dawneeg.h"
+#include "timestamp.h"
 
-#ifdef _WIN32
-#include "windows_registry.h"
+#ifndef _WIN32
+#include <errno.h>
 #endif
+
+#define DAWNEEG_CMD_PROMPT "$$$"
+#define DAWNEEG_CMD_SOFT_RESET "v"
+#define DAWNEEG_CMD_DEFAULT "d"
+#define DAWNEEG_CMD_START_STREAM "b"
+#define DAWNEEG_CMD_STOP_STREAM "s"
+#define DAWNEEG_CHAR_TIME_SYNC '<'
+#define DAWNEEG_CHAR_TIME_SYNC_RESPONSE '>'
+
+#define DAWNEEG_STREAM_HEADER 0xA0
+#define DAWNEEG_STREAM_FOOTER 0xC6
 
 DawnEEG::DawnEEG (struct BrainFlowInputParams params)
     : Board ((int)BoardIds::DAWNEEG_BOARD, params)
@@ -16,6 +30,9 @@ DawnEEG::DawnEEG (struct BrainFlowInputParams params)
     is_streaming = false;
     keep_alive = false;
     initialized = false;
+    state = (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR;
+    half_rtt = 1.79769e+308;
+    time_correction = 0;
     board_type = DAWNEEG_UNKNOWN;
 }
 
@@ -25,42 +42,418 @@ DawnEEG::~DawnEEG ()
     release_session ();
 }
 
-int DawnEEG::open_port ()
+int DawnEEG::prepare_session ()
 {
-    if (serial->is_port_open ())
+    // check params
+    if (initialized)
     {
-        safe_logger (spdlog::level::err, "port {} already open", serial->get_port_name ());
-        return (int)BrainFlowExitCodes::PORT_ALREADY_OPEN_ERROR;
+        safe_logger (spdlog::level::info, "Session is already prepared");
+        return (int)BrainFlowExitCodes::STATUS_OK;
+    }
+    if (params.serial_port.empty ())
+    {
+        safe_logger (spdlog::level::err, "Serial port is not specified.");
+        return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
+    }
+    if ((params.timeout > 600) || (params.timeout < 1))
+    {
+        params.timeout = 1;
     }
 
-    safe_logger (spdlog::level::info, "opening port {}", serial->get_port_name ());
-    int result = serial->open_serial_port ();
-    if (result < 0)
+    int ec = (int)BrainFlowExitCodes::STATUS_OK;
+
+    do
     {
-        safe_logger (spdlog::level::err,
-            "Make sure you provided correct port name and have permissions to open it(run with "
-            "sudo/admin). Also, close all other apps using this port.");
-        return (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
+        // create serial object
+        serial = Serial::create (params.serial_port.c_str (), this);
+
+        if (serial->is_port_open ())
+        {
+            safe_logger (spdlog::level::err, "Port {} already open", serial->get_port_name ());
+            ec = (int)BrainFlowExitCodes::PORT_ALREADY_OPEN_ERROR;
+            break;
+        }
+
+        safe_logger (spdlog::level::info, "Opening port {}", serial->get_port_name ());
+
+        int result = serial->open_serial_port ();
+        if (result < 0)
+        {
+            safe_logger (spdlog::level::err,
+                "Make sure you provided correct port name and have permissions to open it(run with "
+                "sudo/admin). Also, close all other apps using this port.");
+            ec = (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
+            break;
+        }
+
+        safe_logger (spdlog::level::trace, "Port {} is open", serial->get_port_name ());
+
+        result = serial->set_serial_port_settings (params.timeout * 1000, false);
+        if (result < 0)
+        {
+            safe_logger (spdlog::level::err, "Unable to set port settings, result is {}", result);
+            ec =  (int)BrainFlowExitCodes::SET_PORT_ERROR;
+            break;
+        }
+
+        result = serial->set_custom_baudrate (DAWNEEG_BAUDRATE);
+        if (result < 0)
+        {
+            safe_logger (spdlog::level::err, "Unable to set custom baud rate, result is {}", result);
+            ec =   (int)BrainFlowExitCodes::SET_PORT_ERROR;
+            break;
+        }
+
+        safe_logger (spdlog::level::trace, "Set custom baud rate to {}", DAWNEEG_BAUDRATE);
+
+        // set initial settings
+        ec = init_board ();
+        if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+        {
+            break;
+        }
+
+        // set default settings
+        ec = send_to_board (DAWNEEG_CMD_DEFAULT);
+        if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+        {
+            break;
+        }
+
+        // board sends response back, clean serial buffer and analyze response
+        std::string response = read_serial_response ();
+        if (response.substr (0, 7).compare ("Failure") == 0)
+        {
+            safe_logger (spdlog::level::err, "Board config ec.");
+            safe_logger (spdlog::level::trace, "Read {}", response.c_str ());
+            ec = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
+            break;
+        }
+
+        // calc time before start stream
+        for (int i = 0; i < 20; i++)
+        {
+            ec = time_sync ();
+            if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+            {
+                break;
+            }
+        }
+
+        initialized = true;
+        break;
+    } while (true);
+
+    if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+    {
+        if (serial)
+        {
+            delete serial;
+            serial = NULL;
+        }
     }
-    safe_logger (spdlog::level::trace, "port {} is open", serial->get_port_name ());
+    return ec;
+}
+
+int DawnEEG::config_board (std::string config, std::string &response)
+{
+    int ec;
+
+    if (serial == NULL)
+    {
+        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
+    }
+
+    if (config_tracker.apply_config (config) == (int)DawnEEG_CommandTypes::INVALID_COMMAND)
+    {
+        safe_logger (spdlog::level::warn, "Invalid command: {}", config.c_str ());
+        return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
+    }
+
+    if (!initialized)
+    {
+        return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
+    }
+
+    ec = (int)BrainFlowExitCodes::STATUS_OK;
+    if (is_streaming)
+    {
+        safe_logger (spdlog::level::warn,
+            "You are changing board params during streaming, it may lead to sync mismatch between "
+            "data acquisition thread and device");
+        ec = send_to_board (config.c_str ());
+    }
+    else
+    {
+        // read response if streaming is not running
+        ec = send_to_board (config.c_str (), response);
+    }
+
+    if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+    {
+        config_tracker.revert_config ();
+    }
+    return ec;
+}
+
+int DawnEEG::start_stream (int buffer_size, const char *streamer_params)
+{
+    if (!initialized)
+    {
+        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
+    }
+    if (is_streaming)
+    {
+        safe_logger (spdlog::level::err, "Streaming thread already running");
+        return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
+    }
+
+    int ec = prepare_for_acquisition (buffer_size, streamer_params);
+    if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+    {
+        return ec;
+    }
+
+    // start streaming
+    ec = send_to_board (DAWNEEG_CMD_START_STREAM);
+    if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+    {
+        return ec;
+    }
+    keep_alive = true;
+    streaming_thread = std::thread ([this] { this->read_thread (); });
+    // wait for data to ensure that everything is okay
+    std::unique_lock<std::mutex> lk (this->m);
+    auto sec = std::chrono::seconds (1);
+    if (cv.wait_for (lk, 3 * sec,
+            [this] { return this->state != (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR; }))
+    {
+        this->is_streaming = true;
+        return this->state;
+    }
+    else
+    {
+        safe_logger (spdlog::level::err, "No data received in 3sec, stopping thread");
+        this->is_streaming = true;
+        this->stop_stream ();
+        return (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR;
+    }
+}
+
+int DawnEEG::stop_stream ()
+{
+    if (is_streaming)
+    {
+        keep_alive = false;
+        is_streaming = false;
+        if (streaming_thread.joinable ())
+        {
+            streaming_thread.join ();
+        }
+        this->state = (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR;
+
+        int ec;
+        ec = send_to_board (DAWNEEG_CMD_STOP_STREAM);
+        if (ec != (int)BrainFlowExitCodes::STATUS_OK)
+        {
+            return ec;
+        } 
+
+        // free kernel buffer
+        unsigned char b;
+        int res = 1;
+        int max_attempt = 400000; // to dont get to infinite loop
+        int current_attempt = 0;
+        while (res == 1)
+        {
+            res = serial->read_from_serial_port (&b, 1);
+            current_attempt++;
+            if (current_attempt == max_attempt)
+            {
+                safe_logger (
+                    spdlog::level::err, "Command 's' was sent but streaming is still running.");
+                return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
+            }
+        }
+
+        return (int)BrainFlowExitCodes::STATUS_OK;
+    }
+    else
+    {
+        return (int)BrainFlowExitCodes::STREAM_THREAD_IS_NOT_RUNNING;
+    }
+}
+
+int DawnEEG::release_session ()
+{
+    if (initialized)
+    {
+        if (is_streaming)
+        {
+            stop_stream ();
+        }
+        free_packages ();
+        initialized = false;
+        if (serial)
+        {
+            delete serial;
+            serial = NULL;
+        }
+    }
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
 
-// TODO：自定义更高速率的波特率
-int DawnEEG::set_port_settings ()
+void DawnEEG::read_thread ()
 {
-    int result = serial->set_serial_port_settings (1000, false);
-    if (result < 0)
+    /*  DawnEEG8
+        Byte 1: 0xA0
+        Byte 2: Sample Number
+        Bytes 3-5: Data value for EEG channel 1
+        Bytes 6-8: Data value for EEG channel 2
+        Bytes 9-11: Data value for EEG channel 3
+        Bytes 12-14: Data value for EEG channel 4
+        Bytes 15-17: Data value for EEG channel 5
+        Bytes 18-20: Data value for EEG channel 6
+        Bytes 21-23: Data value for EEG channel 6
+        Bytes 24-26: Data value for EEG channel 8
+        Aux Data Bytes 27-32: 6 bytes of data
+        Byte 33: 0xC6
+    */
+    int result;
+    int buf_length = (8 + board_type * 3);
+    unsigned char buf[8 + DAWNEEG_MAX_CHS * 3];
+
+    int num_rows = board_descr["default"]["num_rows"];
+
+    double *package = new double[num_rows];
+
+    for (int i = 0; i < num_rows; i++)
     {
-        safe_logger (spdlog::level::err, "Unable to set port settings, result is {}", result);
-        return (int)BrainFlowExitCodes::SET_PORT_ERROR;
+        package[i] = 0.0;
     }
-    safe_logger (spdlog::level::trace, "set port settings");
-#ifdef __APPLE__
-    int set_latency_res = serial->set_custom_latency (1);
-    safe_logger (spdlog::level::info, "set_latency_res is: {}", set_latency_res);
-#endif
+    std::vector<int> eeg_channels = board_descr["default"]["eeg_channels"];
+
+    while (keep_alive)
+    {
+       // check start byte
+        result = serial->read_from_serial_port (buf, 1);
+        if (result != 1)
+        {
+            safe_logger (spdlog::level::debug, "unable to read 1 byte");
+            continue;
+        }
+        if (buf[0] != DAWNEEG_STREAM_HEADER)
+        {
+            continue;
+        }
+
+        int remaining_bytes = buf_length;
+        int pos = 0;
+        while ((remaining_bytes > 0) && (keep_alive))
+        {
+            result = serial->read_from_serial_port (buf + pos, remaining_bytes);
+            remaining_bytes -= result;
+            pos += result;
+        }
+        if (!keep_alive)
+        {
+            break;
+        }
+
+        if ((buf[buf_length-1] != DAWNEEG_STREAM_FOOTER))
+        {
+            safe_logger (spdlog::level::warn, "Wrong end byte {}", buf[buf_length-1]);
+            continue;
+        }
+
+        if (this->state != (int)BrainFlowExitCodes::STATUS_OK)
+        {
+            safe_logger (spdlog::level::info, "Received first package, streaming is started");
+            {
+                std::lock_guard<std::mutex> lk (this->m);
+                this->state = (int)BrainFlowExitCodes::STATUS_OK;
+            }
+            this->cv.notify_one ();
+            safe_logger (spdlog::level::debug, "Start streaming");
+        }
+
+        // package num
+        package[board_descr["default"]["package_num_channel"].get<int> ()] = (double)buf[0];
+        // eeg
+        for (unsigned int i = 0; i < eeg_channels.size (); i++)
+        {
+            double eeg_scale = (double)(4.5 / float ((pow (2, 23) - 1)) /
+                config_tracker.get_gain_for_channel (i) * 1000000.);
+            package[eeg_channels[i]] = eeg_scale * cast_24bit_to_int32 (buf + 1 + 3 * i);
+        }
+
+//        package[board_descr["default"]["timestamp_channel"].get<int> ()] = get_timestamp ();
+        double device_timestamp = 
+            ((buf[buf_length - 5] << 24) | (buf[buf_length - 4] << 16) | (buf[buf_length - 3] << 8) | (buf[buf_length - 2])) / 1000.0   // millisecond part
+            + (((buf[buf_length - 7] & 0x03) << 8) | (buf[buf_length - 6])) / 1000000.0;  // microsecond part
+        package[board_descr["default"]["timestamp_channel"].get<int> ()] = device_timestamp + time_correction;
+
+
+        push_package (package);
+    }
+    delete[] package;
+}
+
+
+int DawnEEG::send_to_board (const char *msg)
+{
+    int length = (int)strlen (msg);
+    safe_logger (spdlog::level::debug, "Sending {} to the board", msg);
+    int result = serial->send_to_serial_port ((const void *)msg, length);
+    if (result != length)
+    {
+        return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
+    }
+
     return (int)BrainFlowExitCodes::STATUS_OK;
+}
+
+int DawnEEG::send_to_board (const char *msg, std::string &response)
+{
+    int length = (int)strlen (msg);
+    safe_logger (spdlog::level::debug, "Sending {} to the board", msg);
+    int result = serial->send_to_serial_port ((const void *)msg, length);
+    if (result != length)
+    {
+        response = "";
+        return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
+    }
+    response = read_serial_response ();
+    safe_logger (spdlog::level::debug, "Board response: {}", response);
+
+    return (int)BrainFlowExitCodes::STATUS_OK;
+}
+
+std::string DawnEEG::read_serial_response ()
+{
+    constexpr int max_tmp_size = 4096;
+    unsigned char tmp_array[max_tmp_size];
+    unsigned char tmp;
+    int tmp_id = 0;
+    while (serial->read_from_serial_port (&tmp, 1) == 1) // read 1 byte from serial port
+    {
+        if (tmp_id < max_tmp_size)
+        {
+            tmp_array[tmp_id] = tmp;
+            tmp_id++;
+        }
+        else
+        {
+            serial->flush_buffer ();
+            break;
+        }
+    }
+    tmp_id = (tmp_id == max_tmp_size) ? tmp_id - 1 : tmp_id;
+    tmp_array[tmp_id] = '\0';
+
+    return std::string ((const char *)tmp_array);
 }
 
 int DawnEEG::init_board ()
@@ -172,7 +565,6 @@ int DawnEEG::init_board ()
         }
 
         board_descr["default"] = boards_struct.brainflow_boards_json["boards"]["48"]["default"];
-        send_to_board("<");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     else
@@ -183,307 +575,50 @@ int DawnEEG::init_board ()
     }
 }
 
-int DawnEEG::send_to_board (const char *msg)
+int DawnEEG::time_sync ()
 {
-    int length = (int)strlen (msg);
-    safe_logger (spdlog::level::debug, "sending {} to the board", msg);
-    int result = serial->send_to_serial_port ((const void *)msg, length);
-    if (result != length)
+    constexpr int bytes_to_calc_rtt = 14;
+    uint8_t b[bytes_to_calc_rtt];
+
+    double T1 = get_timestamp ();
+
+    int res = serial->send_to_serial_port ("<123456123456<", bytes_to_calc_rtt);
+
+    if (res != bytes_to_calc_rtt)
     {
+        safe_logger (spdlog::level::warn, "Failed to send time calc command to device");
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
 
-    return (int)BrainFlowExitCodes::STATUS_OK;
-}
-
-int DawnEEG::send_to_board (const char *msg, std::string &response)
-{
-    int length = (int)strlen (msg);
-    safe_logger (spdlog::level::debug, "sending {} to the board", msg);
-    int result = serial->send_to_serial_port ((const void *)msg, length);
-    if (result != length)
+    res = serial->read_from_serial_port (b, bytes_to_calc_rtt);
+    double T4 = get_timestamp ();
+    if (res != bytes_to_calc_rtt)
     {
-        response = "";
+        safe_logger (
+            spdlog::level::warn, "Failed to recv resp from time calc command, resp size {}", res);
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
-    response = read_serial_response ();
-    safe_logger (spdlog::level::debug, "board response: {}", response);
+    if (b[0] != DAWNEEG_CHAR_TIME_SYNC_RESPONSE || b[bytes_to_calc_rtt - 1] != DAWNEEG_CHAR_TIME_SYNC_RESPONSE)
+    {
+        safe_logger (
+            spdlog::level::warn, "Incorrect time calc response received");
+        return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
+    }
+
+    double T2 = (double)(((b[3]<<24) + (b[4]<<16) + (b[5]<<8) + b[6])) / 1000 + (double)(((b[1] & 0x03)<<8) + b[2])/1000000;
+    double T3 = (double)(((b[9]<<24) + (b[10]<<16) + (b[11]<<8) + b[12])) / 1000 + (double)(((b[7] & 0x03)<<8) + b[8])/1000000;
+    safe_logger (spdlog::level::trace, "T1 {:.6f} T2 {:.6f} T3 {:.6f} T4{:.6f}", T1, T2, T3, T4);
+
+    double duration = (T4 - T1) - (T3 - T2);
+
+    safe_logger (spdlog::level::trace, "host_timestamp {:.6f} device_timestamp {:.6f} half_rtt {:.6f} time_correction{:.6f}", (T4 + T1) / 2, (T3 + T2) / 2, duration / 2, ((T4 + T1) - (T3 + T2))/2);
+
+    if (half_rtt > duration / 2)
+    {
+        half_rtt = duration / 2;    // get minimal half-rtt
+        time_correction = round((((T4 + T1) - (T3 + T2))/2)) ;
+        safe_logger (spdlog::level::trace, "Updated: half_rtt = {:.6f}, time_correction = {:.6f}", half_rtt, time_correction);
+    }
 
     return (int)BrainFlowExitCodes::STATUS_OK;
-}
-
-std::string DawnEEG::read_serial_response ()
-{
-    constexpr int max_tmp_size = 4096;
-    unsigned char tmp_array[max_tmp_size];
-    unsigned char tmp;
-    int tmp_id = 0;
-    while (serial->read_from_serial_port (&tmp, 1) == 1) // read 1 byte from serial port
-    {
-        if (tmp_id < max_tmp_size)
-        {
-            tmp_array[tmp_id] = tmp;
-            tmp_id++;
-        }
-        else
-        {
-            serial->flush_buffer ();
-            break;
-        }
-    }
-    tmp_id = (tmp_id == max_tmp_size) ? tmp_id - 1 : tmp_id;
-    tmp_array[tmp_id] = '\0';
-
-    return std::string ((const char *)tmp_array);
-}
-
-int DawnEEG::prepare_session ()
-{
-    if (initialized)
-    {
-        safe_logger (spdlog::level::info, "Session already prepared");
-        return (int)BrainFlowExitCodes::STATUS_OK;
-    }
-    if (params.serial_port.empty ())
-    {
-        safe_logger (spdlog::level::err, "serial port not defined");
-        return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
-    }
-#ifdef _WIN32
-    LONG result = set_ftdi_latency_in_registry (1, params.serial_port);
-    if (result != ERROR_SUCCESS)
-    {
-        safe_logger (spdlog::level::warn,
-            "failed to adjust latency param in ftdi driver automatically, reboot or dongle "
-            "reconnection may be needed.");
-    }
-#endif
-    serial = Serial::create (params.serial_port.c_str (), this);
-    int port_open = open_port ();
-    if (port_open != (int)BrainFlowExitCodes::STATUS_OK)
-    {
-        delete serial;
-        serial = NULL;
-        return port_open;
-    }
-
-    int set_settings = set_port_settings ();
-    if (set_settings != (int)BrainFlowExitCodes::STATUS_OK)
-    {
-        delete serial;
-        serial = NULL;
-        return set_settings;
-    }
-
-    int initted = init_board ();
-    if (initted != (int)BrainFlowExitCodes::STATUS_OK)
-    {
-        delete serial;
-        serial = NULL;
-        return initted;
-    }
-
-    int send_res = send_to_board (DAWNEEG_CMD_DEFAULT);
-    if (send_res != (int)BrainFlowExitCodes::STATUS_OK)
-    {
-        return send_res;
-    }
-    // cyton sends response back, clean serial buffer and analyze response
-    std::string response = read_serial_response ();
-    if (response.substr (0, 7).compare ("Failure") == 0)
-    {
-        safe_logger (spdlog::level::err,
-            "Board config error.");
-        safe_logger (spdlog::level::trace, "read {}", response.c_str ());
-        delete serial;
-        serial = NULL;
-        return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
-    }
-
-    initialized = true;
-    return (int)BrainFlowExitCodes::STATUS_OK;
-}
-
-int DawnEEG::start_stream (int buffer_size, const char *streamer_params)
-{
-    if (is_streaming)
-    {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
-        return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
-    }
-
-    int result = prepare_for_acquisition (buffer_size, streamer_params);
-    if (result != (int)BrainFlowExitCodes::STATUS_OK)
-    {
-        return result;
-    }
-
-    // start streaming
-    int send_res = send_to_board (DAWNEEG_CMD_START_STREAM);
-    if (send_res != (int)BrainFlowExitCodes::STATUS_OK)
-    {
-        return send_res;
-    }
-    keep_alive = true;
-    streaming_thread = std::thread ([this] { this->read_thread (); });
-    is_streaming = true;
-    return (int)BrainFlowExitCodes::STATUS_OK;
-}
-
-int DawnEEG::stop_stream ()
-{
-    if (is_streaming)
-    {
-        keep_alive = false;
-        is_streaming = false;
-        if (streaming_thread.joinable ())
-        {
-            streaming_thread.join ();
-        }
-
-        return send_to_board (DAWNEEG_CMD_STOP_STREAM);
-    }
-    else
-    {
-        return (int)BrainFlowExitCodes::STREAM_THREAD_IS_NOT_RUNNING;
-    }
-}
-
-int DawnEEG::release_session ()
-{
-    if (initialized)
-    {
-        if (is_streaming)
-        {
-            stop_stream ();
-        }
-        free_packages ();
-        initialized = false;
-    }
-    if (serial)
-    {
-        serial->close_serial_port ();
-        delete serial;
-        serial = NULL;
-    }
-    return (int)BrainFlowExitCodes::STATUS_OK;
-}
-
-int DawnEEG::config_board (std::string config, std::string &response)
-{
-    if (config_tracker.apply_config (config) == (int)DawnEEG_CommandTypes::INVALID_COMMAND)
-    {
-        safe_logger (spdlog::level::warn, "invalid command: {}", config.c_str ());
-        return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
-    }
-
-    if (!initialized)
-    {
-        return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
-    }
-
-    int result = (int)BrainFlowExitCodes::STATUS_OK;
-    if (is_streaming)
-    {
-        safe_logger (spdlog::level::warn,
-            "You are changing board params during streaming, it may lead to sync mismatch between "
-            "data acquisition thread and device");
-        result = send_to_board (config.c_str ());
-    }
-    else
-    {
-        // read response if streaming is not running
-        result = send_to_board (config.c_str (), response);
-    }
-
-    if (result != (int)BrainFlowExitCodes::STATUS_OK)
-    {
-        config_tracker.revert_config ();
-    }
-    return result;
-}
-
-void DawnEEG::read_thread ()
-{
-    /*  DawnEEG8
-        Byte 1: 0xA0
-        Byte 2: Sample Number
-        Bytes 3-5: Data value for EEG channel 1
-        Bytes 6-8: Data value for EEG channel 2
-        Bytes 9-11: Data value for EEG channel 3
-        Bytes 12-14: Data value for EEG channel 4
-        Bytes 15-17: Data value for EEG channel 5
-        Bytes 18-20: Data value for EEG channel 6
-        Bytes 21-23: Data value for EEG channel 6
-        Bytes 24-26: Data value for EEG channel 8
-        Aux Data Bytes 27-32: 6 bytes of data
-        Byte 33: 0xC6
-    */
-    int result;
-    int buf_length = (8 + board_type * 3);
-    unsigned char buf[buf_length];
-
-    int num_rows = board_descr["default"]["num_rows"];
-
-    double *package = new double[num_rows];
-
-    for (int i = 0; i < num_rows; i++)
-    {
-        package[i] = 0.0;
-    }
-    std::vector<int> eeg_channels = board_descr["default"]["eeg_channels"];
-
-   while (keep_alive)
-    {
-       // check start byte
-        result = serial->read_from_serial_port (buf, 1);
-        if (result != 1)
-        {
-            safe_logger (spdlog::level::debug, "unable to read 1 byte");
-            continue;
-        }
-        if (buf[0] != DAWNEEG_STREAM_HEADER)
-        {
-            continue;
-        }
-
-        int remaining_bytes = buf_length;
-        int pos = 0;
-        while ((remaining_bytes > 0) && (keep_alive))
-        {
-            result = serial->read_from_serial_port (buf + pos, remaining_bytes);
-            remaining_bytes -= result;
-            pos += result;
-        }
-        if (!keep_alive)
-        {
-            break;
-        }
-
-        if ((buf[buf_length-1] != DAWNEEG_STREAM_FOOTER))
-        {
-            safe_logger (spdlog::level::warn, "Wrong end byte {}", buf[buf_length-1]);
-            continue;
-        }
-
-        // package num
-        package[board_descr["default"]["package_num_channel"].get<int> ()] = (double)buf[0];
-        // eeg
-        for (unsigned int i = 0; i < eeg_channels.size (); i++)
-        {
-            double eeg_scale = (double)(4.5 / float ((pow (2, 23) - 1)) /
-                config_tracker.get_gain_for_channel (i) * 1000000.);
-            package[eeg_channels[i]] = eeg_scale * cast_24bit_to_int32 (buf + 1 + 3 * i);
-        }
-
-        package[board_descr["default"]["marker_channel"].get<int> ()] = (double)(buf[buf_length - 7] >> 6);
-
-//        package[board_descr["default"]["timestamp_channel"].get<int> ()] = get_timestamp ();
-        package[board_descr["default"]["timestamp_channel"].get<int> ()] = 
-            ((buf[buf_length - 5] << 24) | (buf[buf_length - 4] << 16) | (buf[buf_length - 3] << 8) | (buf[buf_length - 2])) * 1000.0   // millisecond part
-            + (((buf[buf_length - 7] & 0x03) << 8) | (buf[buf_length - 6]));  // microsecond part
-
-        push_package (package);
-    }
-    delete[] package;
 }

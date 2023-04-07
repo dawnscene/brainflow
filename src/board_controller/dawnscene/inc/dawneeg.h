@@ -1,5 +1,9 @@
 #pragma once
 
+#include <condition_variable>
+#include <math.h>
+#include <mutex>
+#include <string>
 #include <thread>
 
 #include "board.h"
@@ -17,19 +21,12 @@ enum DAWNEEG_BOARD_TYPE {
     DAWNEEG32 = 32
 };
 
-#define DAWNEEG_CMD_PROMPT "$$$"
-#define DAWNEEG_CMD_SOFT_RESET "v"
-#define DAWNEEG_CMD_DEFAULT "d"
-#define DAWNEEG_CMD_START_STREAM "b"
-#define DAWNEEG_CMD_STOP_STREAM "s"
-#define DAWNEEG_STREAM_HEADER 0xA0
-//#define DAWNEEG_STREAM_FOOTER 0xC0
-#define DAWNEEG_STREAM_FOOTER 0xC4
+#define DAWNEEG_BAUDRATE 115200
 
 class DawnEEG : public Board
 {
 
-protected:
+private:
     volatile bool keep_alive;
     bool initialized;
     bool is_streaming;
@@ -38,23 +35,27 @@ protected:
     std::thread streaming_thread;
     Serial *serial;
     DawnEEG_ConfigTracker config_tracker;
+    std::mutex m;
+    std::condition_variable cv;
+    volatile int state;
+    volatile double half_rtt;
+    volatile double time_correction;
 
+    int init_board ();
+    int send_to_board (const char *msg);
+    int send_to_board (const char *msg, std::string &response);
+    std::string read_serial_response ();
+    void read_thread ();
+    int time_sync ();
 
-    virtual int open_port ();
-    virtual int set_port_settings ();
-    virtual int init_board ();
-    virtual int send_to_board (const char *msg);
-    virtual int send_to_board (const char *msg, std::string &response);
-    virtual std::string read_serial_response ();
-    virtual void read_thread ();
 
 public:
     DawnEEG (struct BrainFlowInputParams params);
-    virtual ~DawnEEG ();
+    ~DawnEEG ();
 
-    virtual int prepare_session ();
-    virtual int start_stream (int buffer_size, const char *streamer_params);
-    virtual int stop_stream ();
-    virtual int release_session ();
-    virtual int config_board (std::string config, std::string &response);
+    int prepare_session ();
+    int start_stream (int buffer_size, const char *streamer_params);
+    int stop_stream ();
+    int release_session ();
+    int config_board (std::string config, std::string &response);
 };
