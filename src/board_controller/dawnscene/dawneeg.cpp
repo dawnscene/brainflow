@@ -565,6 +565,8 @@ int DawnEEG::init_board ()
         }
 
         board_descr["default"] = boards_struct.brainflow_boards_json["boards"]["48"]["default"];
+        safe_logger (spdlog::level::info, "Board detected: {}", board_descr["default"]["name"].dump());
+
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     else
@@ -578,11 +580,14 @@ int DawnEEG::init_board ()
 int DawnEEG::time_sync ()
 {
     constexpr int bytes_to_calc_rtt = 14;
+    std::string time_response;
     uint8_t b[bytes_to_calc_rtt];
 
     double T1 = get_timestamp ();
 
     int res = serial->send_to_serial_port ("<123456123456<", bytes_to_calc_rtt);
+    serial->flush_buffer();
+    safe_logger (spdlog::level::trace, "Sending time calc command to device");
 
     if (res != bytes_to_calc_rtt)
     {
@@ -590,7 +595,23 @@ int DawnEEG::time_sync ()
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
 
-    res = serial->read_from_serial_port (b, bytes_to_calc_rtt);
+    unsigned char tmp;
+    int ptr = -1;
+    while (serial->read_from_serial_port (&tmp, 1) == 1) // read 1 byte from serial port
+    {
+        if (ptr < bytes_to_calc_rtt)
+        {
+            ptr++;
+            b[ptr] = tmp;
+        }
+        if (ptr >= bytes_to_calc_rtt - 1)
+        {
+            serial->flush_buffer ();
+            break;
+        }
+    }
+    res = ptr+1;
+
     double T4 = get_timestamp ();
     if (res != bytes_to_calc_rtt)
     {
@@ -611,7 +632,7 @@ int DawnEEG::time_sync ()
 
     double duration = (T4 - T1) - (T3 - T2);
 
-    safe_logger (spdlog::level::trace, "host_timestamp {:.6f} device_timestamp {:.6f} half_rtt {:.6f} time_correction{:.6f}", (T4 + T1) / 2, (T3 + T2) / 2, duration / 2, ((T4 + T1) - (T3 + T2))/2);
+    safe_logger (spdlog::level::trace, "host_timestamp {:.6f} device_timestamp {:.6f} half_rtt {:.6f} time_correction {:.6f}", (T4 + T1) / 2, (T3 + T2) / 2, duration / 2, ((T4 + T1) - (T3 + T2))/2);
 
     if (half_rtt > duration / 2)
     {
