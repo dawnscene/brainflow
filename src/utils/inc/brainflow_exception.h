@@ -14,7 +14,7 @@ public:
 
     explicit BrainFlowException (const char *msg, int exit_code) : std::exception ()
     {
-        msg_ = std::string (msg) + std::to_string (exit_code);
+        msg_ = std::string (msg) + " (code: " + std::to_string (exit_code) + ")";
         this->exit_code = exit_code;
     }
 

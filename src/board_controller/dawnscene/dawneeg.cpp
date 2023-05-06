@@ -399,6 +399,7 @@ void DawnEEG::read_thread ()
         push_package (package);
     }
     delete[] package;
+    safe_logger (spdlog::level::debug, "Stop streaming");
 }
 
 
