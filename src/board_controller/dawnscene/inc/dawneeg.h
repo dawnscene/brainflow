@@ -42,12 +42,14 @@ private:
     volatile double time_correction;
 
     int init_board ();
+    int soft_reset ();
+    int default_config ();
+
     int send_to_board (const char *msg);
     int send_to_board (const char *msg, std::string &response);
     std::string read_serial_response ();
     void read_thread ();
     int time_sync ();
-
 
 public:
     DawnEEG (struct BrainFlowInputParams params);
