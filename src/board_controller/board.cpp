@@ -462,10 +462,18 @@ int Board::get_board_data (int data_count, int preset, double *data_buf)
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     int num_rows = (int)board_descr[preset_str]["num_rows"];
+
+#ifdef BRAINFLOW_NO_RESHAPE
+    // do not swap rows and columns
+    int num_data_points = (int)dbs[preset]->get_data (data_count, data_buf);
+#else
+    // default brainflow behavior: swap rows and columns
     double *buf = new double[data_count * num_rows];
     int num_data_points = (int)dbs[preset]->get_data (data_count, buf);
     reshape_data (num_data_points, preset, buf, data_buf);
     delete[] buf;
+#endif
+
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
 

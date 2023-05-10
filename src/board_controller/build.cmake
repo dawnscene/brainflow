@@ -136,6 +136,7 @@ target_include_directories (
 )
 
 target_compile_definitions(${BOARD_CONTROLLER_NAME} PRIVATE NOMINMAX BRAINFLOW_VERSION=${BRAINFLOW_VERSION})
+target_compile_definitions(${BOARD_CONTROLLER_NAME} PRIVATE BRAINFLOW_NO_RESHAPE)
 
 set_target_properties (${BOARD_CONTROLLER_NAME}
     PROPERTIES
