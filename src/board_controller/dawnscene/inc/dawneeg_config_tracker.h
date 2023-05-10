@@ -203,6 +203,7 @@ public:
                     {
                         return (int)DawnEEG_CommandTypes::INVALID_COMMAND;
                     }
+                    break;
                 case 'z':
                     if ((config.size () >= i + SIZE_IMPEDANCE_COMMAND) &&
                         (config.at (i + SIZE_IMPEDANCE_COMMAND - 1) == 'Z'))
@@ -215,7 +216,8 @@ public:
                     else
                     {
                         return (int)DawnEEG_CommandTypes::INVALID_COMMAND;
-                    }                    
+                    }
+                    break;
                 default:
                     return (int)DawnEEG_CommandTypes::INVALID_COMMAND;
             }
