@@ -870,12 +870,68 @@ BrainFlowBoards::BrainFlowBoards()
     };
     brainflow_boards_json["boards"]["48"]["default"] =
     {
-        {"name", "DawnEEG"},
+        {"name", "DawnEEG4"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 5},
+        {"marker_channel", 6},
+        {"num_rows", 7},
+        {"num_eeg_channels", 4},
+        {"eeg_channels", {1, 2, 3, 4}}
+    };
+    brainflow_boards_json["boards"]["49"]["default"] =
+    {
+        {"name", "DawnEEG6"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 7},
+        {"marker_channel", 8},
+        {"num_rows", 9},
+        {"num_eeg_channels", 6},
+        {"eeg_channels", {1, 2, 3, 4, 5, 6}}
+    };
+    brainflow_boards_json["boards"]["50"]["default"] =
+    {
+        {"name", "DawnEEG8"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 9},
+        {"marker_channel", 10},
+        {"num_rows", 11},
+        {"num_eeg_channels", 8},
+        {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8}}
+    };
+    brainflow_boards_json["boards"]["51"]["default"] =
+    {
+        {"name", "DawnEEG16"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 17},
+        {"marker_channel", 18},
+        {"num_rows", 19},
+        {"num_eeg_channels", 16},
+        {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}}
+    };
+    brainflow_boards_json["boards"]["52"]["default"] =
+    {
+        {"name", "DawnEEG24"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 25},
+        {"marker_channel", 26},
+        {"num_rows", 27},
+        {"num_eeg_channels", 24},
+        {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}}
+    };
+    brainflow_boards_json["boards"]["53"]["default"] =
+    {
+        {"name", "DawnEEG32"},
         {"sampling_rate", 250},
         {"package_num_channel", 0},
         {"timestamp_channel", 33},
         {"marker_channel", 34},
         {"num_rows", 35},
+        {"num_eeg_channels", 32},
         {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}}
     };
 }

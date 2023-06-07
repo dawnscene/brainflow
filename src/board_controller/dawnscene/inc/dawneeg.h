@@ -11,7 +11,8 @@
 #include "serial.h"
 #include "dawneeg_config_tracker.h"
 
-enum DAWNEEG_BOARD_TYPE {
+/*
+enum DAWNEEG_BOARD_CHANNELS {
     DAWNEEG_UNKNOWN = 0,
     DAWNEEG4 = 4,
     DAWNEEG6 = 6,
@@ -19,18 +20,18 @@ enum DAWNEEG_BOARD_TYPE {
     DAWNEEG16 = 16,
     DAWNEEG24 = 24,
     DAWNEEG32 = 32
-};
+}; */
 
 #define DAWNEEG_BAUDRATE 115200
 
 class DawnEEG : public Board
 {
 
-private:
+protected:
     volatile bool keep_alive;
     bool initialized;
     bool is_streaming;
-    DAWNEEG_BOARD_TYPE board_type;
+    int board_type;
 
     std::thread streaming_thread;
     Serial *serial;
@@ -52,7 +53,7 @@ private:
     int time_sync ();
 
 public:
-    DawnEEG (struct BrainFlowInputParams params);
+    DawnEEG (int board_id, struct BrainFlowInputParams params);
     ~DawnEEG ();
 
     int prepare_session ();
@@ -60,4 +61,34 @@ public:
     int stop_stream ();
     int release_session ();
     int config_board (std::string config, std::string &response);
+};
+
+class DawnEEG4 : public DawnEEG {
+    public:
+        DawnEEG4 (struct BrainFlowInputParams params);
+};
+
+class DawnEEG6 : public DawnEEG {
+    public:
+        DawnEEG6 (struct BrainFlowInputParams params);
+};
+
+class DawnEEG8 : public DawnEEG {
+    public:
+        DawnEEG8 (struct BrainFlowInputParams params);
+};
+
+class DawnEEG16 : public DawnEEG {
+    public:
+        DawnEEG16 (struct BrainFlowInputParams params);
+};
+
+class DawnEEG24 : public DawnEEG {
+    public:
+        DawnEEG24 (struct BrainFlowInputParams params);
+};
+
+class DawnEEG32 : public DawnEEG {
+    public:
+        DawnEEG32 (struct BrainFlowInputParams params);
 };

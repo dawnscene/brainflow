@@ -245,8 +245,23 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
         case BoardIds::EMOTIBIT_BOARD:
             board = std::shared_ptr<Board> (new Emotibit (params));
             break;
-        case BoardIds::DAWNEEG_BOARD:
-            board = std::shared_ptr<Board> (new DawnEEG (params));
+        case BoardIds::DAWNEEG4_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG4 (params));
+            break;
+        case BoardIds::DAWNEEG6_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG6 (params));
+            break;
+        case BoardIds::DAWNEEG8_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG8 (params));
+            break;
+        case BoardIds::DAWNEEG16_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG16 (params));
+            break;
+        case BoardIds::DAWNEEG24_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG24 (params));
+            break;
+        case BoardIds::DAWNEEG32_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG32 (params));
             break;
         default:
             return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;

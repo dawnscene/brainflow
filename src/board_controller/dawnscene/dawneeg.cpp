@@ -23,8 +23,8 @@
 #define DAWNEEG_STREAM_HEADER 0xA0
 #define DAWNEEG_STREAM_FOOTER 0xC6
 
-DawnEEG::DawnEEG (struct BrainFlowInputParams params)
-    : Board ((int)BoardIds::DAWNEEG_BOARD, params)
+DawnEEG::DawnEEG (int board_id, struct BrainFlowInputParams params)
+    : Board (board_id, params)
 {
     serial = NULL;
     is_streaming = false;
@@ -33,7 +33,6 @@ DawnEEG::DawnEEG (struct BrainFlowInputParams params)
     state = (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR;
     half_rtt = 1.79769e+308;
     time_correction = 0;
-    board_type = DAWNEEG_UNKNOWN;
 }
 
 DawnEEG::~DawnEEG ()
@@ -331,95 +330,38 @@ int DawnEEG::soft_reset() {
     result = serial->set_serial_port_settings (params.timeout, true); // set timeout to 1s for soft reset only
     if (result != (int)BrainFlowExitCodes::STATUS_OK)
         return result;
-    
-    board_type = DAWNEEG_UNKNOWN; 
-    if (response.find("DawnEEG8") != std::string::npos || response.find("DawnEEG") != std::string::npos)
-        board_type = DAWNEEG8;
-    else if (response.find("DawnEEG4") != std::string::npos)
-        board_type = DAWNEEG4;       
-    else if (response.find("DawnEEG6") != std::string::npos)
-        board_type = DAWNEEG6;
-    else if (response.find("DawnEEG16") != std::string::npos)
-        board_type = DAWNEEG16;
-    else if (response.find("DawnEEG24") != std::string::npos)
-        board_type = DAWNEEG24;
-    else if (response.find("DawnEEG32") != std::string::npos)
-        board_type = DAWNEEG32;
-
-    if (board_type == DAWNEEG_UNKNOWN)
-        return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
 
     if (response.find(DAWNEEG_CMD_PROMPT, 9) != std::string::npos)
     {
-        switch (board_type)
-        {
-            case DAWNEEG4:
-                boards_struct.brainflow_boards_json["boards"]["48"]["default"] = {
-                    {"name", "DawnEEG4"},
-                    {"sampling_rate", 250},
-                    {"package_num_channel", 0},
-                    {"timestamp_channel", 5},
-                    {"marker_channel", 6},
-                    {"num_rows", 7},
-                    {"eeg_channels", {1, 2, 3, 4}}
-                };
+        switch (board_id) {
+            case (int)BoardIds::DAWNEEG4_BOARD:
+                if (response.find("DawnEEG4") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
                 break;
-            case DAWNEEG6:
-                boards_struct.brainflow_boards_json["boards"]["48"]["default"] = {
-                    {"name", "DawnEEG6"},
-                    {"sampling_rate", 250},
-                    {"package_num_channel", 0},
-                    {"timestamp_channel", 7},
-                    {"marker_channel", 8},
-                    {"num_rows", 9},
-                    {"eeg_channels", {1, 2, 3, 4, 5, 6}}
-                };
+            case (int)BoardIds::DAWNEEG6_BOARD:
+                if (response.find("DawnEEG6") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
                 break;
-            case DAWNEEG8:
-                boards_struct.brainflow_boards_json["boards"]["48"]["default"] = {
-                    {"name", "DawnEEG8"},
-                    {"sampling_rate", 250},
-                    {"package_num_channel", 0},
-                    {"timestamp_channel", 9},
-                    {"marker_channel", 10},
-                    {"num_rows", 11},
-                    {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8}}
-                };
+            case (int)BoardIds::DAWNEEG8_BOARD:
+                if (response.find("DawnEEG8") == std::string::npos && response.find("DawnEEG") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
                 break;
-            case DAWNEEG16:
-                boards_struct.brainflow_boards_json["boards"]["48"]["default"] = {
-                    {"name", "DawnEEG16"},
-                    {"sampling_rate", 250},
-                    {"package_num_channel", 0},
-                    {"timestamp_channel", 17},
-                    {"marker_channel", 18},
-                    {"num_rows", 19},
-                    {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}}
-                };                break;
-            case DAWNEEG24:
-                boards_struct.brainflow_boards_json["boards"]["48"]["default"] = {
-                    {"name", "DawnEEG24"},
-                    {"sampling_rate", 250},
-                    {"package_num_channel", 0},
-                    {"timestamp_channel", 25},
-                    {"marker_channel", 26},
-                    {"num_rows", 27},
-                    {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}}
-                };
-            case DAWNEEG32:
-                boards_struct.brainflow_boards_json["boards"]["48"]["default"] = {
-                    {"name", "DawnEEG32"},
-                    {"sampling_rate", 250},
-                    {"package_num_channel", 0},
-                    {"timestamp_channel", 33},
-                    {"marker_channel", 34},
-                    {"num_rows", 35},
-                    {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}}
-                };
+            case (int)BoardIds::DAWNEEG16_BOARD:
+                if (response.find("DawnEEG16") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
                 break;
+            case (int)BoardIds::DAWNEEG24_BOARD:
+                if (response.find("DawnEEG24") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
+                break;
+            case (int)BoardIds::DAWNEEG32_BOARD:
+                if (response.find("DawnEEG32") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
+                break;
+            default:
+                return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
         }
 
-        board_descr["default"] = boards_struct.brainflow_boards_json["boards"]["48"]["default"];
         safe_logger (spdlog::level::info, "Board detected: {}", board_descr["default"]["name"].dump());
 
         return (int)BrainFlowExitCodes::STATUS_OK;
@@ -446,6 +388,11 @@ int DawnEEG::default_config () {
     return ec;
 }
 
+#define NUM_HEADER_BYTES 1
+#define NUM_SAMPLE_NUMBER_BYTES 1
+#define NUM_DATA_BYTES_PER_CHANNEL 3
+#define NUM_AUX_BYTES 6
+#define NUM_FOOTER_BYTES 1
 void DawnEEG::read_thread ()
 {
     /*  DawnEEG8
@@ -463,8 +410,9 @@ void DawnEEG::read_thread ()
         Byte 33: 0xC6
     */
     int result;
-    int buf_length = (8 + board_type * 3);
-    unsigned char buf[8 + DAWNEEG_MAX_CHS * 3];
+    int num_eeg_channels = board_descr["default"]["num_eeg_channels"];
+    int buf_length = NUM_SAMPLE_NUMBER_BYTES + NUM_DATA_BYTES_PER_CHANNEL * num_eeg_channels + NUM_AUX_BYTES + NUM_FOOTER_BYTES;
+    unsigned char *buf = new unsigned char[buf_length];
 
     int num_rows = board_descr["default"]["num_rows"];
 
@@ -540,6 +488,7 @@ void DawnEEG::read_thread ()
         push_package (package);
     }
     delete[] package;
+    delete[] buf;
     safe_logger (spdlog::level::debug, "Stop streaming");
 }
 
@@ -662,4 +611,22 @@ int DawnEEG::time_sync ()
     }
 
     return (int)BrainFlowExitCodes::STATUS_OK;
+}
+
+DawnEEG4::DawnEEG4 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG4_BOARD, params) {
+}
+
+DawnEEG6::DawnEEG6 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG6_BOARD, params) {
+}
+
+DawnEEG8::DawnEEG8 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG8_BOARD, params) {
+}
+
+DawnEEG16::DawnEEG16 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG16_BOARD, params) {
+}
+
+DawnEEG24::DawnEEG24 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG24_BOARD, params) {
+}
+
+DawnEEG32::DawnEEG32 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG32_BOARD, params) {
 }

@@ -49,6 +49,11 @@ classdef BoardIds < int32
         EXPLORE_8_CHAN_BOARD(45)
         GANGLION_NATIVE_BOARD(46)
         EMOTIBIT_BOARD(47)
-        DAWNEEG_BOARD(48)
+        DAWNEEG4_BOARD(48)
+        DAWNEEG6_BOARD(48)
+        DAWNEEG8_BOARD(48)
+        DAWNEEG16_BOARD(48)
+        DAWNEEG24_BOARD(48)
+        DAWNEEG32_BOARD(48)
     end
 end

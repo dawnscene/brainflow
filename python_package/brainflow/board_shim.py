@@ -65,7 +65,12 @@ class BoardIds(enum.IntEnum):
     EXPLORE_8_CHAN_BOARD = 45  #:
     GANGLION_NATIVE_BOARD = 46  #:
     EMOTIBIT_BOARD = 47  #:
-    DAWNEEG_BOARD = 48  #:
+    DAWNEEG4_BOARD = 48  #:
+    DAWNEEG6_BOARD = 49  #:
+    DAWNEEG8_BOARD = 50  #:
+    DAWNEEG16_BOARD = 51  #:
+    DAWNEEG24_BOARD = 52  #:
+    DAWNEEG32_BOARD = 53  #:
 
 
 
