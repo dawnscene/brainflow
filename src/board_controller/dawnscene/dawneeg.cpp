@@ -319,15 +319,8 @@ int DawnEEG::soft_reset() {
     std::string response = "";
     int result;
 
-    result = serial->set_serial_port_settings (1000, true); // set timeout to 1s for soft reset only
-    if (result != (int)BrainFlowExitCodes::STATUS_OK)
-        return result;
 
     result = send_to_board (DAWNEEG_CMD_SOFT_RESET, response);
-    if (result != (int)BrainFlowExitCodes::STATUS_OK)
-        return result;
-
-    result = serial->set_serial_port_settings (params.timeout, true); // set timeout to 1s for soft reset only
     if (result != (int)BrainFlowExitCodes::STATUS_OK)
         return result;
 
