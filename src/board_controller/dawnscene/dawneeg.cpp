@@ -590,7 +590,7 @@ int DawnEEG::time_sync ()
 
     double T2 = (double)(((b[3]<<24) + (b[4]<<16) + (b[5]<<8) + b[6])) / 1000 + (double)(((b[1] & 0x03)<<8) + b[2])/1000000;
     double T3 = (double)(((b[9]<<24) + (b[10]<<16) + (b[11]<<8) + b[12])) / 1000 + (double)(((b[7] & 0x03)<<8) + b[8])/1000000;
-    safe_logger (spdlog::level::trace, "T1 {:.6f} T2 {:.6f} T3 {:.6f} T4{:.6f}", T1, T2, T3, T4);
+    safe_logger (spdlog::level::trace, "T1 {:.6f} T2 {:.6f} T3 {:.6f} T4 {:.6f}", T1, T2, T3, T4);
 
     double duration = (T4 - T1) - (T3 - T2);
 
@@ -599,7 +599,7 @@ int DawnEEG::time_sync ()
     if (half_rtt > duration / 2)
     {
         half_rtt = duration / 2;    // get minimal half-rtt
-        time_correction = round((((T4 + T1) - (T3 + T2))/2)) ;
+        time_correction = ((T4 + T1) - (T3 + T2))/2;
         safe_logger (spdlog::level::trace, "Updated: half_rtt = {:.6f}, time_correction = {:.6f}", half_rtt, time_correction);
     }
 
