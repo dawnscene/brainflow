@@ -42,12 +42,12 @@ int GaleaSerial::prepare_session ()
     // check params
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if (params.serial_port.empty ())
     {
-        safe_logger (spdlog::level::err, "serial port is not specified.");
+        LOG_F(ERROR, "serial port is not specified.");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     if ((params.timeout > 600) || (params.timeout < 1))
@@ -60,7 +60,7 @@ int GaleaSerial::prepare_session ()
     int res = serial->open_serial_port ();
     if (res < 0)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "Make sure you provided correct port name and have permissions to open it(run with "
             "sudo/admin). Also, close all other apps using this port.");
         return (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
@@ -68,7 +68,7 @@ int GaleaSerial::prepare_session ()
     res = serial->set_serial_port_settings (params.timeout * 1000, false);
     if (res < 0)
     {
-        safe_logger (spdlog::level::err, "Unable to set port settings, res is {}", res);
+        LOG_F(ERROR, "Unable to set port settings, res is {}", res);
         delete serial;
         serial = NULL;
         return (int)BrainFlowExitCodes::SET_PORT_ERROR;
@@ -76,12 +76,12 @@ int GaleaSerial::prepare_session ()
     res = serial->set_custom_baudrate (921600);
     if (res < 0)
     {
-        safe_logger (spdlog::level::err, "Unable to set custom baud rate, res is {}", res);
+        LOG_F(ERROR, "Unable to set custom baud rate, res is {}", res);
         delete serial;
         serial = NULL;
         return (int)BrainFlowExitCodes::SET_PORT_ERROR;
     }
-    safe_logger (spdlog::level::trace, "set port settings");
+    LOG_F(2, "set port settings");
 
     // set initial settings
     std::string tmp;
@@ -89,7 +89,7 @@ int GaleaSerial::prepare_session ()
     res = config_board (default_settings, tmp);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to apply default settings");
+        LOG_F(ERROR, "failed to apply default settings");
         delete serial;
         serial = NULL;
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
@@ -98,7 +98,7 @@ int GaleaSerial::prepare_session ()
     res = config_board (sampl_rate, tmp);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to apply defaul sampling rate");
+        LOG_F(ERROR, "failed to apply defaul sampling rate");
         delete serial;
         serial = NULL;
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
@@ -112,7 +112,7 @@ int GaleaSerial::config_board (std::string conf, std::string &response)
 {
     if (serial == NULL)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        LOG_F(ERROR, "You need to call prepare_session before config_board");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     // special handling for calc_time command
@@ -120,7 +120,7 @@ int GaleaSerial::config_board (std::string conf, std::string &response)
     {
         if (is_streaming)
         {
-            safe_logger (spdlog::level::err, "can not calc delay during the streaming.");
+            LOG_F(ERROR, "can not calc delay during the streaming.");
             return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
         }
         int res = calc_time (response);
@@ -129,24 +129,24 @@ int GaleaSerial::config_board (std::string conf, std::string &response)
 
     if (gain_tracker.apply_config (conf) == (int)OpenBCICommandTypes::INVALID_COMMAND)
     {
-        safe_logger (spdlog::level::warn, "invalid command: {}", conf.c_str ());
+        LOG_F(WARNING, "invalid command: {}", conf.c_str ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
     std::string new_conf = conf + "\n";
     int len = (int)new_conf.size ();
-    safe_logger (spdlog::level::debug, "Trying to config GaleaSerial with {}", new_conf.c_str ());
+    LOG_F(1, "Trying to config GaleaSerial with {}", new_conf.c_str ());
     int res = serial->send_to_serial_port (new_conf.c_str (), len);
     if (len != res)
     {
-        safe_logger (spdlog::level::err, "Failed to config a board");
+        LOG_F(ERROR, "Failed to config a board");
         gain_tracker.revert_config ();
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
 
     if (is_streaming)
     {
-        safe_logger (spdlog::level::warn,
+        LOG_F(WARNING,
             "reconfiguring device during the streaming may lead to inconsistent data, it's "
             "recommended to call stop_stream before config_board");
     }
@@ -158,12 +158,12 @@ int GaleaSerial::start_stream (int buffer_size, const char *streamer_params)
 {
     if (!initialized)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        LOG_F(ERROR, "You need to call prepare_session before config_board");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     if (is_streaming)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
 
@@ -188,7 +188,7 @@ int GaleaSerial::start_stream (int buffer_size, const char *streamer_params)
     res = serial->send_to_serial_port ("b\n", 2);
     if (res != 2)
     {
-        safe_logger (spdlog::level::err, "Failed to send a command to board");
+        LOG_F(ERROR, "Failed to send a command to board");
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
 
@@ -205,7 +205,7 @@ int GaleaSerial::start_stream (int buffer_size, const char *streamer_params)
     }
     else
     {
-        safe_logger (spdlog::level::err, "no data received in 5sec, stopping thread");
+        LOG_F(ERROR, "no data received in 5sec, stopping thread");
         this->is_streaming = true;
         this->stop_stream ();
         return (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR;
@@ -223,7 +223,7 @@ int GaleaSerial::stop_stream ()
         int res = serial->send_to_serial_port ("s\n", 2);
         if (res != 2)
         {
-            safe_logger (spdlog::level::err, "Failed to send a command to board");
+            LOG_F(ERROR, "Failed to send a command to board");
             return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
         }
 
@@ -238,8 +238,7 @@ int GaleaSerial::stop_stream ()
             current_attempt++;
             if (current_attempt == max_attempt)
             {
-                safe_logger (
-                    spdlog::level::err, "Command 's' was sent but streaming is still running.");
+                LOG_F(ERROR, "Command 's' was sent but streaming is still running.");
                 return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
             }
         }
@@ -312,7 +311,7 @@ void GaleaSerial::read_thread ()
         int res = serial->read_from_serial_port (b, 1);
         if (res != 1)
         {
-            safe_logger (spdlog::level::debug, "unable to read 1 byte");
+            LOG_F(1, "unable to read 1 byte");
             continue;
         }
         if (b[0] != START_BYTE)
@@ -351,7 +350,7 @@ void GaleaSerial::read_thread ()
         if (num_packages < 1)
         {
             if (pos >= 2)
-                safe_logger (spdlog::level::warn,
+                LOG_F(WARNING,
                     "Failed to parse some data, b[0]: {}, b[pos]: {}, size: {}", (int)b[0],
                     (int)b[pos], (int)pos);
             continue;
@@ -360,13 +359,13 @@ void GaleaSerial::read_thread ()
         {
             if (this->state != (int)BrainFlowExitCodes::STATUS_OK)
             {
-                safe_logger (spdlog::level::info, "received first package streaming is started");
+                LOG_F(INFO, "received first package streaming is started");
                 {
                     std::lock_guard<std::mutex> lk (this->m);
                     this->state = (int)BrainFlowExitCodes::STATUS_OK;
                 }
                 this->cv.notify_one ();
-                safe_logger (spdlog::level::debug, "start streaming");
+                LOG_F(1, "start streaming");
             }
         }
 
@@ -459,15 +458,14 @@ int GaleaSerial::calc_time (std::string &resp)
     int res = serial->send_to_serial_port ("F4444444\n", 9);
     if (res != 9)
     {
-        safe_logger (spdlog::level::warn, "failed to send time calc command to device");
+        LOG_F(WARNING, "failed to send time calc command to device");
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     res = serial->read_from_serial_port (b, bytes_to_calc_rtt);
     double done = get_timestamp ();
     if (res != bytes_to_calc_rtt)
     {
-        safe_logger (
-            spdlog::level::warn, "failed to recv resp from time calc command, resp size {}", res);
+        LOG_F(WARNING, "failed to recv resp from time calc command, resp size {}", res);
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     double duration = done - start;
@@ -482,7 +480,7 @@ int GaleaSerial::calc_time (std::string &resp)
     result["pc_timestamp"] = start + half_rtt;
 
     resp = result.dump ();
-    safe_logger (spdlog::level::info, "calc_time output: {}", resp);
+    LOG_F(INFO, "calc_time output: {}", resp);
 
     return (int)BrainFlowExitCodes::STATUS_OK;
 }

@@ -70,7 +70,7 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
 {
     std::lock_guard<std::mutex> lock (mutex);
 
-    Board::board_logger->info ("incoming json: {}", json_brainflow_input_params);
+    LOG_F(INFO, "incoming json: {}", json_brainflow_input_params);
     struct BrainFlowInputParams params;
     int res = string_to_brainflow_input_params (json_brainflow_input_params, &params);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
@@ -81,8 +81,7 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
     std::pair<int, struct BrainFlowInputParams> key = get_key (board_id, params);
     if (boards.find (key) != boards.end ())
     {
-        Board::board_logger->error (
-            "Board with id {} and the same config already exists", board_id);
+        LOG_F(ERROR, "Board with id {} and the same config already exists", board_id);
         return (int)BrainFlowExitCodes::ANOTHER_BOARD_IS_CREATED_ERROR;
     }
 
@@ -266,7 +265,7 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
         default:
             return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
     }
-    Board::board_logger->trace ("Board object created {}", board->get_board_id ());
+    LOG_F(1, "Board object created {}", board->get_board_id ());
     res = board->prepare_session ();
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
@@ -415,25 +414,31 @@ int log_message_board_controller (int log_level, char *log_message)
     std::lock_guard<std::mutex> lock (mutex);
     if (log_level < 0)
     {
-        Board::board_logger->warn ("log level should be >= 0");
+        LOG_F(WARNING, "log level should be >= 0");
         log_level = 0;
     }
     else if (log_level > 6)
     {
-        Board::board_logger->warn ("log level should be <= 6");
+        LOG_F(WARNING, "log level should be <= 6");
         log_level = 6;
     }
 
-    Board::board_logger->log (spdlog::level::level_enum (log_level), "{}", log_message);
+    VLOG_F(log_level, "{}", log_message);
 
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
 
-int set_log_file_board_controller (const char *log_file)
+int add_log_file_board_controller (const char *log_file, loguru::FileMode mode, loguru::Verbosity verbosity)
 {
     std::lock_guard<std::mutex> lock (mutex);
-    return Board::set_log_file (log_file);
+    return Board::add_log_file (log_file, mode, verbosity);
 }
+
+int  add_callback_board_controller (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity) {
+    std::lock_guard<std::mutex> lock (mutex);
+    return Board::add_callback (id, callback, user_data, verbosity);
+}
+
 
 int java_set_jnienv (JNIEnv *java_jnienv)
 {
@@ -554,8 +559,7 @@ int check_board_session (int board_id, const char *json_brainflow_input_params,
     {
         if (log_error)
         {
-            Board::board_logger->error (
-                "Board with id {} and port provided config is not created", key.first);
+            LOG_F(ERROR, "Board with id {} and port provided config is not created", key.first);
         }
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
@@ -589,7 +593,7 @@ int string_to_brainflow_input_params (
     }
     catch (json::exception &e)
     {
-        Board::board_logger->error ("invalid input json, {}", e.what ());
+        LOG_F(ERROR, "invalid input json, {}", e.what ());
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 }

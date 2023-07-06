@@ -46,13 +46,13 @@ int PlaybackFileBoard::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
 
     if (params.master_board == (int)BoardIds::NO_BOARD)
     {
-        safe_logger (spdlog::level::err, "master board id is not provided");
+        LOG_F(ERROR, "master board id is not provided");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     try
@@ -62,15 +62,14 @@ int PlaybackFileBoard::prepare_session ()
     }
     catch (json::exception &e)
     {
-        safe_logger (spdlog::level::err, "invalid json for master board");
-        safe_logger (spdlog::level::err, e.what ());
+        LOG_F(ERROR, "invalid json for master board");
+        LOG_F(ERROR, e.what ());
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     catch (const std::exception &e)
     {
-        safe_logger (
-            spdlog::level::err, "Write board id of board which recorded data to other_info field");
-        safe_logger (spdlog::level::err, e.what ());
+        LOG_F(ERROR, "Write board id of board which recorded data to other_info field");
+        LOG_F(ERROR, e.what ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -120,10 +119,10 @@ int PlaybackFileBoard::prepare_session ()
 
 int PlaybackFileBoard::start_stream (int buffer_size, const char *streamer_params)
 {
-    safe_logger (spdlog::level::trace, "start stream");
+    LOG_F(2, "start stream");
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
 
@@ -188,7 +187,7 @@ void PlaybackFileBoard::read_thread (int preset, std::string file)
     std::string preset_str = preset_to_string (preset);
     if (board_descr.find (preset_str) == board_descr.end ())
     {
-        safe_logger (spdlog::level::err, "no preset {} for board {}", preset, board_id);
+        LOG_F(ERROR, "no preset {} for board {}", preset, board_id);
         return;
     }
 
@@ -196,7 +195,7 @@ void PlaybackFileBoard::read_thread (int preset, std::string file)
     fp = fopen (file.c_str (), "rb");
     if (fp == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to open file in thread");
+        LOG_F(ERROR, "failed to open file in thread");
         return;
     }
 
@@ -225,12 +224,12 @@ void PlaybackFileBoard::read_thread (int preset, std::string file)
             try
             {
                 fseek (fp, file_offsets[preset][new_pos], SEEK_SET);
-                safe_logger (spdlog::level::trace, "set position in a file to {}", new_pos);
+                LOG_F(2, "set position in a file to {}", new_pos);
             }
             catch (...)
             {
                 // should never happen since input is already validated
-                safe_logger (spdlog::level::warn, "invalid position in a file");
+                LOG_F(WARNING, "invalid position in a file");
             }
             last_timestamp = -1;
             pos_percentage[preset] = -1;
@@ -272,7 +271,7 @@ void PlaybackFileBoard::read_thread (int preset, std::string file)
         }
         if (splitted.size () != num_rows)
         {
-            safe_logger (spdlog::level::err,
+            LOG_F(ERROR,
                 "invalid string in file, check provided board id. String size {}, expected size {}",
                 splitted.size (), num_rows);
             continue;
@@ -285,7 +284,7 @@ void PlaybackFileBoard::read_thread (int preset, std::string file)
             }
             catch (...)
             {
-                safe_logger (spdlog::level::err, "failed to parse value: {}", splitted[i].c_str ());
+                LOG_F(ERROR, "failed to parse value: {}", splitted[i].c_str ());
             }
         }
         if (last_timestamp > 0)
@@ -348,21 +347,20 @@ int PlaybackFileBoard::config_board (std::string config, std::string &response)
             }
             else
             {
-                safe_logger (
-                    spdlog::level::err, "invalid index value, should be between 0 and 100");
+                LOG_F(ERROR, "invalid index value, should be between 0 and 100");
                 return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
             }
         }
         catch (const std::exception &e)
         {
-            safe_logger (spdlog::level::err, "need to write a number after {}, exception is: {}",
+            LOG_F(ERROR, "need to write a number after {}, exception is: {}",
                 SET_INDEX_PREFIX, e.what ());
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
     }
     else
     {
-        safe_logger (spdlog::level::warn, "invalid config string {}", config);
+        LOG_F(WARNING, "invalid config string {}", config);
     }
 
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -375,7 +373,7 @@ int PlaybackFileBoard::get_file_offsets (std::string filename, std::vector<long 
     FILE *fp = fopen (filename.c_str (), "rb");
     if (fp == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to open file: {}", filename.c_str ());
+        LOG_F(ERROR, "failed to open file: {}", filename.c_str ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -395,7 +393,7 @@ int PlaybackFileBoard::get_file_offsets (std::string filename, std::vector<long 
     fclose (fp);
     if (offsets.size () < 2)
     {
-        safe_logger (spdlog::level::err, "empty file: {}", filename);
+        LOG_F(ERROR, "empty file: {}", filename);
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 

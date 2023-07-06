@@ -15,7 +15,7 @@ int Cyton::config_board (std::string conf, std::string &response)
 {
     if (gain_tracker.apply_config (conf) == (int)OpenBCICommandTypes::INVALID_COMMAND)
     {
-        safe_logger (spdlog::level::warn, "invalid command: {}", conf.c_str ());
+        LOG_F(WARNING, "invalid command: {}", conf.c_str ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     int res = OpenBCISerialBoard::config_board (conf, response);
@@ -60,7 +60,7 @@ void Cyton::read_thread ()
         res = serial->read_from_serial_port (b, 1);
         if (res != 1)
         {
-            safe_logger (spdlog::level::debug, "unable to read 1 byte");
+            LOG_F(1, "unable to read 1 byte");
             continue;
         }
         if (b[0] != START_BYTE)
@@ -83,7 +83,7 @@ void Cyton::read_thread ()
 
         if ((b[31] < END_BYTE_STANDARD) || (b[31] > END_BYTE_MAX))
         {
-            safe_logger (spdlog::level::warn, "Wrong end byte {}", b[31]);
+            LOG_F(WARNING, "Wrong end byte {}", b[31]);
             continue;
         }
 

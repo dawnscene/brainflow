@@ -97,32 +97,32 @@ int Muse::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if (params.timeout < 1)
     {
         params.timeout = 6;
     }
-    safe_logger (spdlog::level::info, "Use timeout for discovery: {}", params.timeout);
+    LOG_F(INFO, "Use timeout for discovery: {}", params.timeout);
     if (!init_dll_loader ())
     {
-        safe_logger (spdlog::level::err, "Failed to init dll_loader");
+        LOG_F(ERROR, "Failed to init dll_loader");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     size_t adapter_count = simpleble_adapter_get_count ();
     if (adapter_count == 0)
     {
-        safe_logger (spdlog::level::err, "No BLE adapters found");
+        LOG_F(ERROR, "No BLE adapters found");
         return (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
     }
 
-    safe_logger (spdlog::level::info, "found {} BLE adapter(s)", adapter_count);
+    LOG_F(INFO, "found {} BLE adapter(s)", adapter_count);
 
     muse_adapter = simpleble_adapter_get_handle (0);
     if (muse_adapter == NULL)
     {
-        safe_logger (spdlog::level::err, "Adapter is NULL");
+        LOG_F(ERROR, "Adapter is NULL");
         return (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
     }
 
@@ -131,7 +131,7 @@ int Muse::prepare_session ()
 
     if (!simpleble_adapter_is_bluetooth_enabled ())
     {
-        safe_logger (spdlog::level::warn, "Probably bluetooth is disabled.");
+        LOG_F(WARNING, "Probably bluetooth is disabled.");
         // dont throw an exception because of this
         // https://github.com/OpenBluetoothToolbox/SimpleBLE/issues/115
     }
@@ -142,11 +142,11 @@ int Muse::prepare_session ()
     auto sec = std::chrono::seconds (1);
     if (cv.wait_for (lk, params.timeout * sec, [this] { return this->muse_peripheral != NULL; }))
     {
-        safe_logger (spdlog::level::info, "Found Muse device");
+        LOG_F(INFO, "Found Muse device");
     }
     else
     {
-        safe_logger (spdlog::level::err, "Failed to find Muse Device");
+        LOG_F(ERROR, "Failed to find Muse Device");
         res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
     simpleble_adapter_scan_stop (muse_adapter);
@@ -157,13 +157,13 @@ int Muse::prepare_session ()
         {
             if (simpleble_peripheral_connect (muse_peripheral) == SIMPLEBLE_SUCCESS)
             {
-                safe_logger (spdlog::level::info, "Connected to Muse Device");
+                LOG_F(INFO, "Connected to Muse Device");
                 res = (int)BrainFlowExitCodes::STATUS_OK;
                 break;
             }
             else
             {
-                safe_logger (spdlog::level::warn, "Failed to connect to Muse Device: {}/3", i);
+                LOG_F(WARNING, "Failed to connect to Muse Device: {}/3", i);
                 res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
 #ifdef _WIN32
                 Sleep (1000);
@@ -192,14 +192,14 @@ int Muse::prepare_session ()
             if (simpleble_peripheral_services_get (muse_peripheral, i, &service) !=
                 SIMPLEBLE_SUCCESS)
             {
-                safe_logger (spdlog::level::err, "failed to get service");
+                LOG_F(ERROR, "failed to get service");
                 res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
             }
 
-            safe_logger (spdlog::level::trace, "found servce {}", service.uuid.value);
+            LOG_F(2, "found servce {}", service.uuid.value);
             for (size_t j = 0; j < service.characteristic_count; j++)
             {
-                safe_logger (spdlog::level::trace, "found characteristic {}",
+                LOG_F(2, "found characteristic {}",
                     service.characteristics[j].uuid.value);
 
                 if (strcmp (service.characteristics[j].uuid.value, MUSE_GATT_ATTR_STREAM_TOGGLE) ==
@@ -208,7 +208,7 @@ int Muse::prepare_session ()
                     control_characteristics = std::pair<simpleble_uuid_t, simpleble_uuid_t> (
                         service.uuid, service.characteristics[j].uuid);
                     control_characteristics_found = true;
-                    safe_logger (spdlog::level::info, "found control characteristic");
+                    LOG_F(INFO, "found control characteristic");
                 }
                 if (strcmp (service.characteristics[j].uuid.value, MUSE_GATT_ATTR_TP9) == 0)
                 {
@@ -222,7 +222,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -239,7 +239,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -256,7 +256,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -273,7 +273,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -290,7 +290,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -307,7 +307,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -325,7 +325,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -342,7 +342,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -359,7 +359,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -376,7 +376,7 @@ int Muse::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -499,7 +499,7 @@ int Muse::release_session ()
                 if (simpleble_peripheral_unsubscribe (
                         muse_peripheral, notified.first, notified.second) != SIMPLEBLE_SUCCESS)
                 {
-                    safe_logger (spdlog::level::err, "failed to unsubscribe for {} {}",
+                    LOG_F(ERROR, "failed to unsubscribe for {} {}",
                         notified.first.value, notified.second.value);
                 }
             }
@@ -569,7 +569,7 @@ int Muse::config_board (std::string config)
     if (simpleble_peripheral_write_command (muse_peripheral, control_characteristics.first,
             control_characteristics.second, command, len + 2) != SIMPLEBLE_SUCCESS)
     {
-        safe_logger (spdlog::level::err, "failed to send command {} to device", config.c_str ());
+        LOG_F(ERROR, "failed to send command {} to device", config.c_str ());
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -605,9 +605,9 @@ void Muse::adapter_on_scan_found (simpleble_adapter_t adapter, simpleble_periphe
         }
     }
 
-    safe_logger (spdlog::level::trace, "address {}", peripheral_address);
+    LOG_F(2, "address {}", peripheral_address);
     simpleble_free (peripheral_address);
-    safe_logger (spdlog::level::trace, "identifier {}", peripheral_identified);
+    LOG_F(2, "identifier {}", peripheral_identified);
     simpleble_free (peripheral_identified);
 
     if (found)
@@ -630,7 +630,7 @@ void Muse::peripheral_on_eeg (simpleble_uuid_t service, simpleble_uuid_t charact
     std::lock_guard<std::mutex> callback_guard (callback_lock);
     if (size != 20)
     {
-        safe_logger (spdlog::level::warn, "unknown size for eeg callback: {}", size);
+        LOG_F(WARNING, "unknown size for eeg callback: {}", size);
         return;
     }
 
@@ -661,7 +661,7 @@ void Muse::peripheral_on_eeg (simpleble_uuid_t service, simpleble_uuid_t charact
             }
             catch (...)
             {
-                safe_logger (spdlog::level::trace,
+                LOG_F(2,
                     "no other_channels for this board"); // should not get here
             }
         }
@@ -713,7 +713,7 @@ void Muse::peripheral_on_accel (
     std::lock_guard<std::mutex> callback_guard (callback_lock);
     if (size != 20)
     {
-        safe_logger (spdlog::level::warn, "unknown size for accel callback: {}", size);
+        LOG_F(WARNING, "unknown size for accel callback: {}", size);
         return;
     }
 
@@ -734,7 +734,7 @@ void Muse::peripheral_on_gyro (
     std::lock_guard<std::mutex> callback_guard (callback_lock);
     if (size != 20)
     {
-        safe_logger (spdlog::level::warn, "unknown size for gyro callback: {}", size);
+        LOG_F(WARNING, "unknown size for gyro callback: {}", size);
         return;
     }
 
@@ -776,7 +776,7 @@ void Muse::peripheral_on_ppg (simpleble_uuid_t service, simpleble_uuid_t charact
     std::lock_guard<std::mutex> callback_guard (callback_lock);
     if (size != 20)
     {
-        safe_logger (spdlog::level::warn, "unknown size for ppg callback: {}", size);
+        LOG_F(WARNING, "unknown size for ppg callback: {}", size);
         return;
     }
     unsigned int package_num = data[0] * 256 + data[1];

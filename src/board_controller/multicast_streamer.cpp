@@ -42,7 +42,7 @@ int MultiCastStreamer::init_streamer ()
 {
     if ((is_streaming) || (server != NULL) || (db != NULL))
     {
-        Board::board_logger->error ("multicast streamer is running");
+        LOG_F(ERROR, "multicast streamer is running");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -52,14 +52,14 @@ int MultiCastStreamer::init_streamer ()
     {
         delete server;
         server = NULL;
-        Board::board_logger->error ("failed to init server multicast socket {}", res);
+        LOG_F(ERROR, "failed to init server multicast socket {}", res);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
     db = new DataBuffer (len, 1000);
     if (!db->is_ready ())
     {
-        Board::board_logger->error ("unable to prepare buffer for multicast");
+        LOG_F(ERROR, "unable to prepare buffer for multicast");
         delete db;
         db = NULL;
         delete server;

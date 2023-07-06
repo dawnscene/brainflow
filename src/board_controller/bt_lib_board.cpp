@@ -35,7 +35,7 @@ BTLibBoard::BTLibBoard (int board_id, struct BrainFlowInputParams params) : Boar
         bluetoothlib_path = lib_name;
     }
 
-    safe_logger (spdlog::level::debug, "use dyn lib: {}", bluetoothlib_path.c_str ());
+    LOG_F(1, "use dyn lib: {}", bluetoothlib_path.c_str ());
     dll_loader = new DLLLoader (bluetoothlib_path.c_str ());
     initialized = false;
 }
@@ -50,49 +50,48 @@ int BTLibBoard::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
 
     int return_res = (int)BrainFlowExitCodes::STATUS_OK;
     if (!dll_loader->load_library ())
     {
-        safe_logger (spdlog::level::err, "Failed to load library");
+        LOG_F(ERROR, "Failed to load library");
         return_res = (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     else
     {
-        safe_logger (spdlog::level::debug, "Library is loaded");
+        LOG_F(1, "Library is loaded");
     }
 
     if (params.ip_port <= 0)
     {
         params.ip_port = 1;
     }
-    safe_logger (spdlog::level::info, "Use bluetooth port: {}", params.ip_port);
+    LOG_F(INFO, "Use bluetooth port: {}", params.ip_port);
     if ((params.mac_address.empty ()) && (return_res == (int)BrainFlowExitCodes::STATUS_OK))
     {
-        safe_logger (
-            spdlog::level::warn, "mac address is not provided, trying to autodiscover device");
+        LOG_F(WARNING, "mac address is not provided, trying to autodiscover device");
         int res = find_bt_addr (get_name_selector ().c_str ());
         if (res == (int)SocketBluetoothReturnCodes::UNIMPLEMENTED_ERROR)
         {
-            safe_logger (spdlog::level::err, "autodiscovery for this OS is not supported");
+            LOG_F(ERROR, "autodiscovery for this OS is not supported");
             return_res = (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
         else if (res == (int)SocketBluetoothReturnCodes::DEVICE_IS_NOT_DISCOVERABLE)
         {
-            safe_logger (spdlog::level::err, "check that device paired and connected");
+            LOG_F(ERROR, "check that device paired and connected");
             return_res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
         }
         else if (res != (int)SocketBluetoothReturnCodes::STATUS_OK)
         {
-            safe_logger (spdlog::level::err, "failed to autodiscover device: {}", res);
+            LOG_F(ERROR, "failed to autodiscover device: {}", res);
             return_res = (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
         else
         {
-            safe_logger (spdlog::level::info, "found device {}", params.mac_address.c_str ());
+            LOG_F(INFO, "found device {}", params.mac_address.c_str ());
         }
     }
 
@@ -127,7 +126,7 @@ int BTLibBoard::config_board (std::string config, std::string &response)
     int res = bluetooth_write_data (config.c_str (), (int)strlen (config.c_str ()));
     if (res != (int)strlen (config.c_str ()))
     {
-        safe_logger (spdlog::level::err, "failed to config device, res: {}", res);
+        LOG_F(ERROR, "failed to config device, res: {}", res);
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -139,15 +138,14 @@ int BTLibBoard::bluetooth_open_device ()
         (int (*) (int, char *))dll_loader->get_address ("bluetooth_open_device");
     if (func_open == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for bluetooth_open_device");
+        LOG_F(ERROR, "failed to get function address for bluetooth_open_device");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
     int res = func_open (params.ip_port, const_cast<char *> (params.mac_address.c_str ()));
     if (res != (int)SocketBluetoothReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to open bt connection: {}", res);
+        LOG_F(ERROR, "failed to open bt connection: {}", res);
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -159,14 +157,13 @@ int BTLibBoard::bluetooth_close_device ()
         (int (*) (char *))dll_loader->get_address ("bluetooth_close_device");
     if (func_close == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for bluetooth_close_device");
+        LOG_F(ERROR, "failed to get function address for bluetooth_close_device");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     int res = func_close (const_cast<char *> (params.mac_address.c_str ()));
     if (res != (int)SocketBluetoothReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to close bt connection: {}", res);
+        LOG_F(ERROR, "failed to close bt connection: {}", res);
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -178,7 +175,7 @@ int BTLibBoard::bluetooth_write_data (const char *command, int len)
         (int (*) (char *, int, char *))dll_loader->get_address ("bluetooth_write_data");
     if (func_config == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for bluetooth_write_data");
+        LOG_F(ERROR, "failed to get function address for bluetooth_write_data");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -193,7 +190,7 @@ int BTLibBoard::bluetooth_get_data (char *data, int len)
         (int (*) (char *, int, char *))dll_loader->get_address ("bluetooth_get_data");
     if (func_get == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for bluetooth_get_data");
+        LOG_F(ERROR, "failed to get function address for bluetooth_get_data");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -206,8 +203,7 @@ int BTLibBoard::find_bt_addr (const char *name_selector)
         (int (*) (char *, char *, int *))dll_loader->get_address ("bluetooth_discover_device");
     if (func_find == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for bluetooth_discover_device");
+        LOG_F(ERROR, "failed to get function address for bluetooth_discover_device");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     char mac_addr[40];

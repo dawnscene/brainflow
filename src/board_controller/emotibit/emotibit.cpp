@@ -37,7 +37,7 @@ int Emotibit::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
 
@@ -104,12 +104,12 @@ int Emotibit::start_stream (int buffer_size, const char *streamer_params)
 {
     if (!initialized)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        LOG_F(ERROR, "You need to call prepare_session before config_board");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     int res = prepare_for_acquisition (buffer_size, streamer_params);
@@ -132,7 +132,7 @@ int Emotibit::stop_stream ()
     {
         if (send_control_msg (MODE_LOW_POWER) != (int)BrainFlowExitCodes::STATUS_OK)
         {
-            safe_logger (spdlog::level::warn, "failed to set low power mode");
+            LOG_F(WARNING, "failed to set low power mode");
         }
         keep_alive = false;
         streaming_thread.join ();
@@ -218,7 +218,7 @@ void Emotibit::read_thread ()
         int bytes_recv = data_socket->recv (message, max_size);
         if (bytes_recv < 1)
         {
-            safe_logger (spdlog::level::trace, "no data received");
+            LOG_F(2, "no data received");
             continue;
         }
         std::string message_received = std::string (message, bytes_recv);
@@ -286,7 +286,7 @@ void Emotibit::read_thread ()
                         }
                         catch (...)
                         {
-                            safe_logger (spdlog::level::warn, "invalid data in payload: {}",
+                            LOG_F(WARNING, "invalid data in payload: {}",
                                 payload[i].c_str ());
                         }
                     }
@@ -329,7 +329,7 @@ void Emotibit::read_thread ()
                         }
                         catch (...)
                         {
-                            safe_logger (spdlog::level::warn, "invalid data in payload: {}",
+                            LOG_F(WARNING, "invalid data in payload: {}",
                                 payload[i].c_str ());
                         }
                     }
@@ -368,7 +368,7 @@ void Emotibit::read_thread ()
                             }
                             catch (...)
                             {
-                                safe_logger (spdlog::level::warn, "invalid data in payload: {}",
+                                LOG_F(WARNING, "invalid data in payload: {}",
                                     payload[i].c_str ());
                             }
                         }
@@ -385,7 +385,7 @@ void Emotibit::read_thread ()
                             }
                             catch (...)
                             {
-                                safe_logger (spdlog::level::warn, "invalid data in payload: {}",
+                                LOG_F(WARNING, "invalid data in payload: {}",
                                     payload[i].c_str ());
                             }
                         }
@@ -407,7 +407,7 @@ void Emotibit::read_thread ()
                         }
                         catch (...)
                         {
-                            safe_logger (spdlog::level::warn, "invalid data in payload: {}",
+                            LOG_F(WARNING, "invalid data in payload: {}",
                                 payload[i].c_str ());
                         }
                         push_package (anc_packages[i], (int)BrainFlowPresets::ANCILLARY_PRESET);
@@ -416,8 +416,7 @@ void Emotibit::read_thread ()
             }
             else
             {
-                safe_logger (
-                    spdlog::level::trace, "invalid header for package: {}", recv_package.c_str ());
+                LOG_F(2, "invalid header for package: {}", recv_package.c_str ());
             }
         }
     }
@@ -531,14 +530,13 @@ bool Emotibit::get_header (
     }
     else
     {
-        safe_logger (
-            spdlog::level::warn, "package size: {} is smaller than expected", package.size ());
+        LOG_F(WARNING, "package size: {} is smaller than expected", package.size ());
         return false;
     }
 
     if (package.size () < (size_t)HEADER_LENGTH + *data_len)
     {
-        safe_logger (spdlog::level::warn, "small package: {}", package_string.c_str ());
+        LOG_F(WARNING, "small package: {}", package_string.c_str ());
         return false;
     }
     else
@@ -569,22 +567,21 @@ int Emotibit::create_adv_connection ()
     }
     else
     {
-        safe_logger (spdlog::level::warn,
+        LOG_F(WARNING,
             "no ip_address provided, trying to discover network, it may take longer");
         broadcast_addresses = get_broadcast_addresses ();
     }
 
     if (broadcast_addresses.empty ())
     {
-        safe_logger (spdlog::level::err, "no broadcast addresses found");
+        LOG_F(ERROR, "no broadcast addresses found");
         res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
 
     for (std::string broadcast_address : broadcast_addresses)
     {
         res = (int)BrainFlowExitCodes::STATUS_OK;
-        safe_logger (
-            spdlog::level::info, "trying broadcast address: {}", broadcast_address.c_str ());
+        LOG_F(INFO, "trying broadcast address: {}", broadcast_address.c_str ());
         if (res == (int)BrainFlowExitCodes::STATUS_OK)
         {
             advertise_socket_server =
@@ -592,19 +589,18 @@ int Emotibit::create_adv_connection ()
             int init_res = advertise_socket_server->init ();
             if (init_res != (int)BroadCastServerReturnCodes::STATUS_OK)
             {
-                safe_logger (spdlog::level::err, "failed to init broadcast server socket: {}", res);
+                LOG_F(ERROR, "failed to init broadcast server socket: {}", res);
                 res = (int)BrainFlowExitCodes::GENERAL_ERROR;
             }
         }
         if (res == (int)BrainFlowExitCodes::STATUS_OK)
         {
             std::string package = create_package (HELLO_EMOTIBIT, 0, "", 0);
-            safe_logger (spdlog::level::info, "sending package: {}", package.c_str ());
+            LOG_F(INFO, "sending package: {}", package.c_str ());
             int bytes_send = advertise_socket_server->send (package.c_str (), (int)package.size ());
             if (bytes_send != (int)package.size ())
             {
-                safe_logger (
-                    spdlog::level::err, "failed to send adv package, res is {}", bytes_send);
+                LOG_F(ERROR, "failed to send adv package, res is {}", bytes_send);
                 res = (int)BrainFlowExitCodes::GENERAL_ERROR;
             }
         }
@@ -626,13 +622,13 @@ int Emotibit::create_adv_connection ()
                         split_string (std::string (recv_data, bytes_recv), PACKET_DELIMITER_CSV);
                     for (std::string recv_package : splitted_packages)
                     {
-                        safe_logger (spdlog::level::trace, "package is {}", recv_package.c_str ());
+                        LOG_F(2, "package is {}", recv_package.c_str ());
                         int package_num = 0;
                         int data_len = 0;
                         std::string type_tag = "";
                         if (get_header (recv_package, &package_num, &data_len, type_tag))
                         {
-                            safe_logger (spdlog::level::info, "received {} package", type_tag);
+                            LOG_F(INFO, "received {} package", type_tag);
                             if ((type_tag == HELLO_HOST) || (type_tag == PONG))
                             {
                                 found = true;
@@ -641,7 +637,7 @@ int Emotibit::create_adv_connection ()
                         }
                         else
                         {
-                            safe_logger (spdlog::level::trace, "invalid header, package is: {}",
+                            LOG_F(2, "invalid header, package is: {}",
                                 recv_package.c_str ());
                         }
                     }
@@ -653,7 +649,7 @@ int Emotibit::create_adv_connection ()
             }
             if (!found)
             {
-                safe_logger (spdlog::level::err, "no emotibit found");
+                LOG_F(ERROR, "no emotibit found");
                 res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
             }
         }
@@ -682,13 +678,13 @@ int Emotibit::create_data_connection ()
         data_socket = new SocketClientUDP (ip_address.c_str (), data_port);
         if (data_socket->bind () == ((int)SocketClientUDPReturnCodes::STATUS_OK))
         {
-            safe_logger (spdlog::level::info, "use port {} for data", data_port);
+            LOG_F(INFO, "use port {} for data", data_port);
             res = (int)BrainFlowExitCodes::STATUS_OK;
             break;
         }
         else
         {
-            safe_logger (spdlog::level::warn, "failed to bind to {}", data_port);
+            LOG_F(WARNING, "failed to bind to {}", data_port);
         }
         data_socket->close ();
         delete data_socket;
@@ -704,10 +700,10 @@ int Emotibit::create_control_connection ()
         SocketClientUDP::get_local_ip_addr (ip_address.c_str (), WIFI_ADVERTISING_PORT, local_ip);
     if (local_ip_res != (int)SocketClientUDPReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to get local ip addr: {}", local_ip_res);
+        LOG_F(ERROR, "failed to get local ip addr: {}", local_ip_res);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
-    safe_logger (spdlog::level::info, "local ip addr is {}", local_ip);
+    LOG_F(INFO, "local ip addr is {}", local_ip);
 
     int res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     for (int i = 1; i < 39; i += 2)
@@ -716,13 +712,13 @@ int Emotibit::create_control_connection ()
         control_socket = new SocketServerTCP (local_ip, control_port, true);
         if (control_socket->bind () == ((int)SocketServerTCPReturnCodes::STATUS_OK))
         {
-            safe_logger (spdlog::level::info, "use port {} for control", control_port);
+            LOG_F(INFO, "use port {} for control", control_port);
             res = (int)BrainFlowExitCodes::STATUS_OK;
             break;
         }
         else
         {
-            safe_logger (spdlog::level::warn, "failed to connect to {}", control_port);
+            LOG_F(WARNING, "failed to connect to {}", control_port);
         }
         control_socket->close ();
         delete control_socket;
@@ -736,7 +732,7 @@ int Emotibit::send_connect_msg ()
     // should never happen
     if ((control_port < 0) || (data_port < 0))
     {
-        safe_logger (spdlog::level::info, "ports for data or control are not set");
+        LOG_F(INFO, "ports for data or control are not set");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -746,13 +742,13 @@ int Emotibit::send_connect_msg ()
     payload.push_back (DATA_PORT);
     payload.push_back (std::to_string (data_port));
     std::string package = create_package (EMOTIBIT_CONNECT, 0, payload);
-    safe_logger (spdlog::level::info, "sending connect package: {}", package.c_str ());
+    LOG_F(INFO, "sending connect package: {}", package.c_str ());
 
     int res = (int)BrainFlowExitCodes::STATUS_OK;
     int bytes_send = advertise_socket_server->send (package.c_str (), (int)package.size ());
     if (bytes_send != (int)package.size ())
     {
-        safe_logger (spdlog::level::err, "failed to send connect package, res is {}", bytes_send);
+        LOG_F(ERROR, "failed to send connect package, res is {}", bytes_send);
         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return res;
@@ -763,7 +759,7 @@ int Emotibit::send_control_msg (const char *msg)
     // should never happen
     if ((control_port < 0) || (data_port < 0))
     {
-        safe_logger (spdlog::level::info, "ports for data or control are not set");
+        LOG_F(INFO, "ports for data or control are not set");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -773,13 +769,13 @@ int Emotibit::send_control_msg (const char *msg)
     int bytes_send = control_socket->send (package.c_str (), (int)package.size ());
     if (bytes_send != (int)package.size ())
     {
-        safe_logger (spdlog::level::err, "failed to send control msg package: {}, res is {}", msg,
+        LOG_F(ERROR, "failed to send control msg package: {}, res is {}", msg,
             bytes_send);
         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     else
     {
-        safe_logger (spdlog::level::info, "Message: {} sent", msg);
+        LOG_F(INFO, "Message: {} sent", msg);
     }
     return res;
 }
@@ -790,7 +786,7 @@ int Emotibit::wait_for_connection ()
     int accept_res = control_socket->accept ();
     if (accept_res != (int)SocketServerTCPReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "error in accept");
+        LOG_F(ERROR, "error in accept");
         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     else
@@ -798,10 +794,10 @@ int Emotibit::wait_for_connection ()
         int max_attempts = 15;
         for (int i = 0; i < max_attempts; i++)
         {
-            safe_logger (spdlog::level::trace, "waiting for accept {}/{}", i, max_attempts);
+            LOG_F(2, "waiting for accept {}/{}", i, max_attempts);
             if (control_socket->client_connected)
             {
-                safe_logger (spdlog::level::trace, "emotibit connected");
+                LOG_F(2, "emotibit connected");
                 break;
             }
             else
@@ -815,7 +811,7 @@ int Emotibit::wait_for_connection ()
         }
         if (!control_socket->client_connected)
         {
-            safe_logger (spdlog::level::trace, "failed to establish connection");
+            LOG_F(2, "failed to establish connection");
             res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
         }
     }
@@ -837,11 +833,11 @@ void Emotibit::ping_thread ()
         payload.push_back (DATA_PORT);
         payload.push_back (std::to_string (data_port));
         std::string package = create_package (PING, package_num++, payload);
-        // safe_logger (spdlog::level::trace, "sending package: {}", package.c_str ());
+        // LOG_F(2, "sending package: {}", package.c_str ());
         int bytes_send = advertise_socket_server->send (package.c_str (), (int)package.size ());
         if (bytes_send != (int)package.size ())
         {
-            safe_logger (spdlog::level::err, "failed to send adv package, res is {}", bytes_send);
+            LOG_F(ERROR, "failed to send adv package, res is {}", bytes_send);
         }
     }
 }

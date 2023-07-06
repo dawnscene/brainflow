@@ -111,6 +111,7 @@ target_include_directories (
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/http
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/unicorn/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/oscpp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/loguru
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/bluetooth/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/board_controller/inc
@@ -227,6 +228,8 @@ if (ANDROID)
     find_library (log-lib log)
     target_link_libraries (${BOARD_CONTROLLER_NAME} PRIVATE log)
 endif (ANDROID)
+
+target_link_libraries (${BOARD_CONTROLLER_NAME} PRIVATE fmt::fmt-header-only)
 
 install (
     FILES

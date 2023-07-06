@@ -59,7 +59,7 @@ std::string GforcePro::get_lib_name ()
             path_env += std::string (gforcelib_dir);
             if (_putenv (path_env.c_str ()) != 0)
             {
-                safe_logger (spdlog::level::warn, "Failed to set PATH to {}", path_env.c_str ());
+                LOG_F(WARNING, "Failed to set PATH to {}", path_env.c_str ());
             }
         }
     }
@@ -68,7 +68,7 @@ std::string GforcePro::get_lib_name ()
         gforcelib_path = gforcelib_name;
     }
 
-    safe_logger (spdlog::level::debug, "use dyn lib: {}", gforcelib_path.c_str ());
+    LOG_F(1, "use dyn lib: {}", gforcelib_path.c_str ());
     return gforcelib_path;
 }
 
@@ -76,7 +76,7 @@ int GforcePro::prepare_session ()
 {
     if (!is_valid)
     {
-        safe_logger (spdlog::level::info, "only one GForceLib per process is allowed");
+        LOG_F(INFO, "only one GForceLib per process is allowed");
         return (int)BrainFlowExitCodes::ANOTHER_BOARD_IS_CREATED_ERROR;
     }
     return DynLibBoard::prepare_session ();
@@ -95,31 +95,31 @@ GforcePro::~GforcePro ()
 
 int GforcePro::prepare_session ()
 {
-    safe_logger (spdlog::level::err, "GforcePro doesnt support Unix.");
+    LOG_F(ERROR, "GforcePro doesnt support Unix.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int GforcePro::config_board (std::string config, std::string &response)
 {
-    safe_logger (spdlog::level::err, "GforcePro doesnt support Unix.");
+    LOG_F(ERROR, "GforcePro doesnt support Unix.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int GforcePro::release_session ()
 {
-    safe_logger (spdlog::level::err, "GforcePro doesnt support Unix.");
+    LOG_F(ERROR, "GforcePro doesnt support Unix.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int GforcePro::stop_stream ()
 {
-    safe_logger (spdlog::level::err, "GforcePro doesnt support Unix.");
+    LOG_F(ERROR, "GforcePro doesnt support Unix.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int GforcePro::start_stream (int buffer_size, const char *streamer_params)
 {
-    safe_logger (spdlog::level::err, "GforcePro doesnt support Unix.");
+    LOG_F(ERROR, "GforcePro doesnt support Unix.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 

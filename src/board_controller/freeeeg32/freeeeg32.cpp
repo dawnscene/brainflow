@@ -33,12 +33,12 @@ int FreeEEG32::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session already prepared");
+        LOG_F(INFO, "Session already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if (params.serial_port.empty ())
     {
-        safe_logger (spdlog::level::err, "serial port is empty");
+        LOG_F(ERROR, "serial port is empty");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     serial = Serial::create (params.serial_port.c_str (), this);
@@ -66,7 +66,7 @@ int FreeEEG32::start_stream (int buffer_size, const char *streamer_params)
 {
     if (is_streaming)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     int res = prepare_for_acquisition (buffer_size, streamer_params);
@@ -175,8 +175,7 @@ void FreeEEG32::read_thread ()
         }
         else
         {
-            safe_logger (
-                spdlog::level::trace, "stopped with pos: {}, keep_alive: {}", pos, keep_alive);
+            LOG_F(2, "stopped with pos: {}, keep_alive: {}", pos, keep_alive);
         }
     }
     delete[] package;
@@ -186,17 +185,17 @@ int FreeEEG32::open_port ()
 {
     if (serial->is_port_open ())
     {
-        safe_logger (spdlog::level::err, "port {} already open", serial->get_port_name ());
+        LOG_F(ERROR, "port {} already open", serial->get_port_name ());
         return (int)BrainFlowExitCodes::PORT_ALREADY_OPEN_ERROR;
     }
 
-    safe_logger (spdlog::level::info, "openning port {}", serial->get_port_name ());
+    LOG_F(INFO, "openning port {}", serial->get_port_name ());
     int res = serial->open_serial_port ();
     if (res < 0)
     {
         return (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
     }
-    safe_logger (spdlog::level::trace, "port {} is open", serial->get_port_name ());
+    LOG_F(2, "port {} is open", serial->get_port_name ());
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
 
@@ -205,7 +204,7 @@ int FreeEEG32::set_port_settings ()
     int res = serial->set_serial_port_settings (1000, false);
     if (res < 0)
     {
-        safe_logger (spdlog::level::err, "Unable to set port settings, res is {}", res);
+        LOG_F(ERROR, "Unable to set port settings, res is {}", res);
 #ifndef _WIN32
         return (int)BrainFlowExitCodes::SET_PORT_ERROR;
 #endif
@@ -213,7 +212,7 @@ int FreeEEG32::set_port_settings ()
     res = serial->set_custom_baudrate (921600);
     if (res < 0)
     {
-        safe_logger (spdlog::level::err, "Unable to set custom baud rate, res is {}", res);
+        LOG_F(ERROR, "Unable to set custom baud rate, res is {}", res);
 #ifndef _WIN32
         // Setting the baudrate may return an error on Windows for some serial drivers.
         // We do not throw an exception, because it will still work with USB.
@@ -221,12 +220,12 @@ int FreeEEG32::set_port_settings ()
         return (int)BrainFlowExitCodes::SET_PORT_ERROR;
 #endif
     }
-    safe_logger (spdlog::level::trace, "set port settings");
+    LOG_F(2, "set port settings");
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
 
 int FreeEEG32::config_board (std::string config, std::string &response)
 {
-    safe_logger (spdlog::level::err, "FreeEEG32 doesn't support board configuration.");
+    LOG_F(ERROR, "FreeEEG32 doesn't support board configuration.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }

@@ -51,7 +51,7 @@ NeuromdBoard::NeuromdBoard (int board_id, struct BrainFlowInputParams params)
         neurosdk_path = neurosdk_name;
     }
 
-    safe_logger (spdlog::level::debug, "use dyn lib: {}", neurosdk_path.c_str ());
+    LOG_F(1, "use dyn lib: {}", neurosdk_path.c_str ());
     dll_loader = new DLLLoader (neurosdk_path.c_str ());
 
     sdk_last_error_msg = NULL;
@@ -100,7 +100,7 @@ int NeuromdBoard::prepare_session ()
 {
     if (!dll_loader->load_library ())
     {
-        safe_logger (spdlog::level::err, "Failed to load library");
+        LOG_F(ERROR, "Failed to load library");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -110,21 +110,21 @@ int NeuromdBoard::prepare_session ()
     sdk_last_error_msg = (int (*) (char *, size_t))dll_loader->get_address ("sdk_last_error_msg");
     if (sdk_last_error_msg == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for sdk_last_error_msg");
+        LOG_F(ERROR, "failed to get function address for sdk_last_error_msg");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_disconnect
     device_disconnect = (int (*) (Device *))dll_loader->get_address ("device_disconnect");
     if (device_disconnect == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_disconnect");
+        LOG_F(ERROR, "failed to get function address for device_disconnect");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_delete
     device_delete = (void (*) (Device *))dll_loader->get_address ("device_delete");
     if (device_delete == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_delete");
+        LOG_F(ERROR, "failed to get function address for device_delete");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // create_device_enumerator
@@ -132,8 +132,7 @@ int NeuromdBoard::prepare_session ()
         (DeviceEnumerator * (*)(DeviceType)) dll_loader->get_address ("create_device_enumerator");
     if (create_device_enumerator == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for create_device_enumerator");
+        LOG_F(ERROR, "failed to get function address for create_device_enumerator");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // create_Device
@@ -141,7 +140,7 @@ int NeuromdBoard::prepare_session ()
         (Device * (*)(DeviceEnumerator *, DeviceInfo)) dll_loader->get_address ("create_Device");
     if (create_Device == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for create_Device");
+        LOG_F(ERROR, "failed to get function address for create_Device");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // enumerator_delete
@@ -149,7 +148,7 @@ int NeuromdBoard::prepare_session ()
         (void (*) (DeviceEnumerator *))dll_loader->get_address ("enumerator_delete");
     if (enumerator_delete == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for enumerator_delete");
+        LOG_F(ERROR, "failed to get function address for enumerator_delete");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // enumerator_get_device_list
@@ -157,8 +156,7 @@ int NeuromdBoard::prepare_session ()
         DeviceInfoArray *))dll_loader->get_address ("enumerator_get_device_list");
     if (enumerator_get_device_list == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for enumerator_get_device_list");
+        LOG_F(ERROR, "failed to get function address for enumerator_get_device_list");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // free_DeviceInfoArray
@@ -166,7 +164,7 @@ int NeuromdBoard::prepare_session ()
         (void (*) (DeviceInfoArray))dll_loader->get_address ("free_DeviceInfoArray");
     if (free_DeviceInfoArray == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for free_DeviceInfoArray");
+        LOG_F(ERROR, "failed to get function address for free_DeviceInfoArray");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_read_Name
@@ -174,7 +172,7 @@ int NeuromdBoard::prepare_session ()
         (int (*) (Device *, char *, size_t))dll_loader->get_address ("device_read_Name");
     if (device_read_Name == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_read_Name");
+        LOG_F(ERROR, "failed to get function address for device_read_Name");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_read_SerialNumber
@@ -182,15 +180,14 @@ int NeuromdBoard::prepare_session ()
         (int (*) (Device *, char *, size_t))dll_loader->get_address ("device_read_SerialNumber");
     if (device_read_SerialNumber == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for device_read_SerialNumber");
+        LOG_F(ERROR, "failed to get function address for device_read_SerialNumber");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_connect
     device_connect = (int (*) (Device *))dll_loader->get_address ("device_connect");
     if (device_connect == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_connect");
+        LOG_F(ERROR, "failed to get function address for device_connect");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_read_State
@@ -198,7 +195,7 @@ int NeuromdBoard::prepare_session ()
         (int (*) (Device *, DeviceState *))dll_loader->get_address ("device_read_State");
     if (device_read_State == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_read_State");
+        LOG_F(ERROR, "failed to get function address for device_read_State");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_set_SamplingFrequency
@@ -206,15 +203,14 @@ int NeuromdBoard::prepare_session ()
         "device_set_SamplingFrequency");
     if (device_set_SamplingFrequency == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for device_set_SamplingFrequency");
+        LOG_F(ERROR, "failed to get function address for device_set_SamplingFrequency");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_set_Gain
     device_set_Gain = (int (*) (Device *, Gain))dll_loader->get_address ("device_set_Gain");
     if (device_set_Gain == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_set_Gain");
+        LOG_F(ERROR, "failed to get function address for device_set_Gain");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_set_Offset
@@ -222,7 +218,7 @@ int NeuromdBoard::prepare_session ()
         (int (*) (Device *, unsigned char))dll_loader->get_address ("device_set_Offset");
     if (device_set_Offset == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_set_Offset");
+        LOG_F(ERROR, "failed to get function address for device_set_Offset");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_set_ExternalSwitchState
@@ -230,7 +226,7 @@ int NeuromdBoard::prepare_session ()
         Device *, ExternalSwitchInput))dll_loader->get_address ("device_set_ExternalSwitchState");
     if (device_set_ExternalSwitchState == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for device_set_ExternalSwitchState");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
@@ -239,8 +235,7 @@ int NeuromdBoard::prepare_session ()
         (int (*) (Device *, ADCInput))dll_loader->get_address ("device_set_ADCInputState");
     if (device_set_ADCInputState == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for device_set_ADCInputState");
+        LOG_F(ERROR, "failed to get function address for device_set_ADCInputState");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_set_HardwareFilterState
@@ -248,7 +243,7 @@ int NeuromdBoard::prepare_session ()
         (int (*) (Device *, bool))dll_loader->get_address ("device_set_HardwareFilterState");
     if (device_set_HardwareFilterState == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for device_set_HardwareFilterState");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
@@ -257,8 +252,7 @@ int NeuromdBoard::prepare_session ()
         const Device *, ChannelInfoArray *))dll_loader->get_address ("device_available_channels");
     if (device_available_channels == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for device_available_channels");
+        LOG_F(ERROR, "failed to get function address for device_available_channels");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // create_SignalDoubleChannel_info
@@ -266,7 +260,7 @@ int NeuromdBoard::prepare_session ()
         (*)(Device *, ChannelInfo)) dll_loader->get_address ("create_SignalDoubleChannel_info");
     if (create_SignalDoubleChannel_info == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for create_SignalDoubleChannel_info");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
@@ -275,15 +269,14 @@ int NeuromdBoard::prepare_session ()
         (void (*) (ChannelInfoArray))dll_loader->get_address ("free_ChannelInfoArray");
     if (free_ChannelInfoArray == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for free_ChannelInfoArray");
+        LOG_F(ERROR, "failed to get function address for free_ChannelInfoArray");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_execute
     device_execute = (int (*) (Device *, Command))dll_loader->get_address ("device_execute");
     if (device_execute == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for device_execute");
+        LOG_F(ERROR, "failed to get function address for device_execute");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // AnyChannel_get_total_length
@@ -291,8 +284,7 @@ int NeuromdBoard::prepare_session ()
         (int (*) (AnyChannel *, size_t *))dll_loader->get_address ("AnyChannel_get_total_length");
     if (AnyChannel_get_total_length == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for AnyChannel_get_total_length");
+        LOG_F(ERROR, "failed to get function address for AnyChannel_get_total_length");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // DoubleChannel_read_data
@@ -300,15 +292,14 @@ int NeuromdBoard::prepare_session ()
         size_t *))dll_loader->get_address ("DoubleChannel_read_data");
     if (DoubleChannel_read_data == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for DoubleChannel_read_data");
+        LOG_F(ERROR, "failed to get function address for DoubleChannel_read_data");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // AnyChannel_delete
     AnyChannel_delete = (void (*) (AnyChannel *))dll_loader->get_address ("AnyChannel_delete");
     if (AnyChannel_delete == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for AnyChannel_delete");
+        LOG_F(ERROR, "failed to get function address for AnyChannel_delete");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // device_subscribe_int_channel_data_received
@@ -317,7 +308,7 @@ int NeuromdBoard::prepare_session ()
         void *))dll_loader->get_address ("device_subscribe_int_channel_data_received");
     if (device_subscribe_int_channel_data_received == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for device_subscribe_int_channel_data_received");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
@@ -327,7 +318,7 @@ int NeuromdBoard::prepare_session ()
         void *))dll_loader->get_address ("device_subscribe_double_channel_data_received");
     if (device_subscribe_double_channel_data_received == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for device_subscribe_double_channel_data_received");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
@@ -335,7 +326,7 @@ int NeuromdBoard::prepare_session ()
     free_IntDataArray = (void (*) (IntDataArray))dll_loader->get_address ("free_IntDataArray");
     if (free_IntDataArray == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for free_IntDataArray");
+        LOG_F(ERROR, "failed to get function address for free_IntDataArray");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     // free_DoubleDataArray
@@ -343,7 +334,7 @@ int NeuromdBoard::prepare_session ()
         (void (*) (DoubleDataArray))dll_loader->get_address ("free_DoubleDataArray");
     if (free_DoubleDataArray == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for free_DoubleDataArray");
+        LOG_F(ERROR, "failed to get function address for free_DoubleDataArray");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 #ifdef _WIN32
@@ -352,7 +343,7 @@ int NeuromdBoard::prepare_session ()
         (void (*) (ListenerHandle))dll_loader->get_address ("free_listener_handle");
     if (free_listener_handle == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for free_listener_handle");
+        LOG_F(ERROR, "failed to get function address for free_listener_handle");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 #else
@@ -361,8 +352,7 @@ int NeuromdBoard::prepare_session ()
         (void (*) (LengthListenerHandle))dll_loader->get_address ("free_length_listener_handle");
     if (free_length_listener_handle == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for free_length_listener_handle");
+        LOG_F(ERROR, "failed to get function address for free_length_listener_handle");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 #endif
@@ -444,7 +434,7 @@ int NeuromdBoard::find_device ()
 {
     if ((params.timeout < 0) || (params.timeout > 600))
     {
-        safe_logger (spdlog::level::err, "bad value for timeout");
+        LOG_F(ERROR, "bad value for timeout");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -461,7 +451,7 @@ int NeuromdBoard::find_device ()
     {
         char error_msg[1024];
         sdk_last_error_msg (error_msg, 1024);
-        safe_logger (spdlog::level::err, "create enumerator error {}", error_msg);
+        LOG_F(ERROR, "create enumerator error {}", error_msg);
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
 
@@ -470,7 +460,7 @@ int NeuromdBoard::find_device ()
     {
         timeout = params.timeout;
     }
-    safe_logger (spdlog::level::info, "set timeout for device discovery to {}", timeout);
+    LOG_F(INFO, "set timeout for device discovery to {}", timeout);
 
     int sleep_delay = 300;
     int attempts = (int)(timeout * 1000.0 / sleep_delay);
@@ -503,7 +493,7 @@ int NeuromdBoard::find_device ()
         {
             char error_msg[1024];
             sdk_last_error_msg (error_msg, 1024);
-            safe_logger (spdlog::level::err, "create Device error {}", error_msg);
+            LOG_F(ERROR, "create Device error {}", error_msg);
             res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
         }
     }
@@ -525,7 +515,7 @@ int NeuromdBoard::find_device_info (DeviceEnumerator *enumerator, DeviceInfo *ou
         }
         catch (...)
         {
-            safe_logger (spdlog::level::err,
+            LOG_F(ERROR,
                 "You need to provide NeuromdBoard serial number to serial_number field!");
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
@@ -536,7 +526,7 @@ int NeuromdBoard::find_device_info (DeviceEnumerator *enumerator, DeviceInfo *ou
     {
         char error_msg[1024];
         sdk_last_error_msg (error_msg, 1024);
-        safe_logger (spdlog::level::warn, "enumerator_get_device_list error: {}", error_msg);
+        LOG_F(WARNING, "enumerator_get_device_list error: {}", error_msg);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -548,7 +538,7 @@ int NeuromdBoard::find_device_info (DeviceEnumerator *enumerator, DeviceInfo *ou
             if ((device_info_array.info_array[i].SerialNumber == serial_number) ||
                 (serial_number == 0))
             {
-                safe_logger (spdlog::level::info, "Found device with ID {}",
+                LOG_F(INFO, "Found device with ID {}",
                     device_info_array.info_array[i].SerialNumber);
                 *out_device_info = device_info_array.info_array[i];
                 free_DeviceInfoArray (device_info_array);
@@ -562,7 +552,7 @@ int NeuromdBoard::find_device_info (DeviceEnumerator *enumerator, DeviceInfo *ou
             Device *temp_device = create_Device (enumerator, device_info_array.info_array[i]);
             if (temp_device == NULL)
             {
-                safe_logger (spdlog::level::trace, "failed to create device");
+                LOG_F(2, "failed to create device");
                 continue;
             }
             // need to connect to read serial number
@@ -593,7 +583,7 @@ int NeuromdBoard::find_device_info (DeviceEnumerator *enumerator, DeviceInfo *ou
             result_code = device_read_Name (temp_device, device_name, 256);
             if (result_code != SDK_NO_ERROR)
             {
-                safe_logger (spdlog::level::trace, "failed to read device name");
+                LOG_F(2, "failed to read device name");
                 device_disconnect (temp_device);
                 device_delete (temp_device);
                 temp_device = NULL;
@@ -602,13 +592,13 @@ int NeuromdBoard::find_device_info (DeviceEnumerator *enumerator, DeviceInfo *ou
             result_code = device_read_SerialNumber (temp_device, device_num, 256);
             if (result_code != SDK_NO_ERROR)
             {
-                safe_logger (spdlog::level::trace, "failed to read device number");
+                LOG_F(2, "failed to read device number");
                 device_disconnect (temp_device);
                 device_delete (temp_device);
                 temp_device = NULL;
                 continue;
             }
-            safe_logger (spdlog::level::info, "device name is {}, Serial number is {}", device_name,
+            LOG_F(INFO, "device name is {}, Serial number is {}", device_name,
                 device_num);
             device_disconnect (temp_device);
             device_delete (temp_device);
@@ -626,8 +616,7 @@ int NeuromdBoard::find_device_info (DeviceEnumerator *enumerator, DeviceInfo *ou
                     }
                     else
                     {
-                        safe_logger (
-                            spdlog::level::info, "device doesn't match provided serial number");
+                        LOG_F(INFO, "device doesn't match provided serial number");
                     }
                 }
                 else
@@ -648,7 +637,7 @@ int NeuromdBoard::connect_device ()
 {
     if (device == NULL)
     {
-        safe_logger (spdlog::level::err, "Device is not created.");
+        LOG_F(ERROR, "Device is not created.");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
 
@@ -668,7 +657,7 @@ int NeuromdBoard::connect_device ()
         {
             char error_msg[1024];
             sdk_last_error_msg (error_msg, 1024);
-            safe_logger (spdlog::level::err, "device read state error {}", error_msg);
+            LOG_F(ERROR, "device read state error {}", error_msg);
             return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
         }
 #ifdef _WIN32
@@ -680,7 +669,7 @@ int NeuromdBoard::connect_device ()
 
     if (device_state != DeviceStateConnected)
     {
-        safe_logger (spdlog::level::err, "Device is not connected.");
+        LOG_F(ERROR, "Device is not connected.");
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
 

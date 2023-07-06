@@ -5,6 +5,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <stdio.h>
 
 #include "board_controller.h"
 #include "brainflow_boards.h"
@@ -14,18 +15,16 @@
 #include "spinlock.h"
 #include "streamer.h"
 
-#include "spdlog/spdlog.h"
-
 #define MAX_CAPTURE_SAMPLES (86400 * 250) // should be enough for one day of capturing
 
 
 class Board
 {
 public:
-    static std::shared_ptr<spdlog::logger> board_logger;
     static JNIEnv *java_jnienv; // nullptr unless on java
     static int set_log_level (int log_level);
-    static int set_log_file (const char *log_file);
+    static int add_log_file (const char *log_file, loguru::FileMode mode, loguru::Verbosity verbosity);
+    static int add_callback (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity);
 
     virtual ~Board ()
     {
@@ -45,7 +44,7 @@ public:
         }
         catch (json::exception &e)
         {
-            safe_logger (spdlog::level::err, e.what ());
+            LOG_F(ERROR, e.what ());
         }
     }
     virtual int prepare_session () = 0;
@@ -61,29 +60,6 @@ public:
     int insert_marker (double value, int preset);
     int add_streamer (const char *streamer_params, int preset);
     int delete_streamer (const char *streamer_params, int preset);
-
-    // Board::board_logger should not be called from destructors, to ensure that there are safe log
-    // methods Board::board_logger still available but should be used only outside destructors
-    template <typename Arg1, typename... Args>
-    // clang-format off
-    void safe_logger (
-        spdlog::level::level_enum log_level, const char *fmt, const Arg1 &arg1, const Args &... args)
-    // clang-format on
-    {
-        if (!skip_logs)
-        {
-            Board::board_logger->log (log_level, fmt, arg1, args...);
-        }
-    }
-
-    template <typename T>
-    void safe_logger (spdlog::level::level_enum log_level, const T &msg)
-    {
-        if (!skip_logs)
-        {
-            Board::board_logger->log (log_level, msg);
-        }
-    }
 
     int get_board_id ()
     {

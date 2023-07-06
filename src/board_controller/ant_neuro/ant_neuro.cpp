@@ -54,7 +54,7 @@ AntNeuroBoard::AntNeuroBoard (int board_id, struct BrainFlowInputParams params)
     {
         ant_neuro_lib_path = lib_name;
     }
-    safe_logger (spdlog::level::debug, "use dyn lib: {}", ant_neuro_lib_path.c_str ());
+    LOG_F(1, "use dyn lib: {}", ant_neuro_lib_path.c_str ());
 
     keep_alive = false;
     initialized = false;
@@ -80,7 +80,7 @@ int AntNeuroBoard::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
 
@@ -91,13 +91,12 @@ int AntNeuroBoard::prepare_session ()
     }
     catch (const exceptions::notFound &e)
     {
-        safe_logger (spdlog::level::err, "No devices found, {}", e.what ());
+        LOG_F(ERROR, "No devices found, {}", e.what ());
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
     catch (...)
     {
-        safe_logger (
-            spdlog::level::err, "Failed to create factory from {}", ant_neuro_lib_path.c_str ());
+        LOG_F(ERROR, "Failed to create factory from {}", ant_neuro_lib_path.c_str ());
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -109,12 +108,12 @@ int AntNeuroBoard::start_stream (int buffer_size, const char *streamer_params)
 {
     if (stream != NULL)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     if (amp == NULL)
     {
-        safe_logger (spdlog::level::err, "Amplifier is not created");
+        LOG_F(ERROR, "Amplifier is not created");
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
     int res = prepare_for_acquisition (buffer_size, streamer_params);
@@ -130,12 +129,12 @@ int AntNeuroBoard::start_stream (int buffer_size, const char *streamer_params)
     }
     catch (...)
     {
-        safe_logger (spdlog::level::err, "Failed to start acquisition.");
+        LOG_F(ERROR, "Failed to start acquisition.");
         return (int)BrainFlowExitCodes::STREAM_THREAD_ERROR;
     }
     if (stream == NULL)
     {
-        safe_logger (spdlog::level::err, "Failed to start acquisition.");
+        LOG_F(ERROR, "Failed to start acquisition.");
         return (int)BrainFlowExitCodes::STREAM_THREAD_ERROR;
     }
 
@@ -180,7 +179,7 @@ void AntNeuroBoard::read_thread ()
 {
     if ((amp == NULL) || (stream == NULL))
     {
-        safe_logger (spdlog::level::err, "amp or stream not created in thread");
+        LOG_F(ERROR, "amp or stream not created in thread");
         return;
     }
 
@@ -198,7 +197,7 @@ void AntNeuroBoard::read_thread ()
     }
     catch (...)
     {
-        safe_logger (spdlog::level::trace, "device has no emg channels");
+        LOG_F(2, "device has no emg channels");
     }
     try
     {
@@ -206,7 +205,7 @@ void AntNeuroBoard::read_thread ()
     }
     catch (...)
     {
-        safe_logger (spdlog::level::trace, "device has no eeg channels");
+        LOG_F(2, "device has no eeg channels");
     }
     std::vector<channel> ant_channels = stream->getChannelList ();
 
@@ -250,7 +249,7 @@ void AntNeuroBoard::read_thread ()
         }
         catch (...)
         {
-            safe_logger (spdlog::level::err, "exception in data thread.");
+            LOG_F(ERROR, "exception in data thread.");
             std::this_thread::sleep_for (std::chrono::milliseconds (100));
         }
     }
@@ -261,7 +260,7 @@ int AntNeuroBoard::config_board (std::string config, std::string &response)
 {
     if (amp == NULL)
     {
-        safe_logger (spdlog::level::err, "Amplifier is not created");
+        LOG_F(ERROR, "Amplifier is not created");
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
 
@@ -276,7 +275,7 @@ int AntNeuroBoard::config_board (std::string config, std::string &response)
         }
         catch (...)
         {
-            safe_logger (spdlog::level::err, "format is '{}value'", prefix.c_str ());
+            LOG_F(ERROR, "format is '{}value'", prefix.c_str ());
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
         // check that provided value is correct
@@ -289,16 +288,16 @@ int AntNeuroBoard::config_board (std::string config, std::string &response)
         }
         else
         {
-            safe_logger (spdlog::level::err, "not supported value provided");
+            LOG_F(ERROR, "not supported value provided");
             for (int i = 0; i < (int)allowed_values.size (); i++)
             {
-                safe_logger (spdlog::level::debug, "supported value: {}", allowed_values[i]);
+                LOG_F(1, "supported value: {}", allowed_values[i]);
             }
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
     }
 
-    safe_logger (spdlog::level::err, "format is '{}value'", prefix.c_str ());
+    LOG_F(ERROR, "format is '{}value'", prefix.c_str ());
     return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
 }
 
@@ -315,31 +314,31 @@ AntNeuroBoard::~AntNeuroBoard ()
 
 int AntNeuroBoard::prepare_session ()
 {
-    safe_logger (spdlog::level::err, "AntNeuroBoard doesnt support MacOS.");
+    LOG_F(ERROR, "AntNeuroBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int AntNeuroBoard::config_board (std::string config, std::string &response)
 {
-    safe_logger (spdlog::level::err, "AntNeuroBoard doesnt support MacOS.");
+    LOG_F(ERROR, "AntNeuroBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int AntNeuroBoard::release_session ()
 {
-    safe_logger (spdlog::level::err, "AntNeuroBoard doesnt support MacOS.");
+    LOG_F(ERROR, "AntNeuroBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int AntNeuroBoard::stop_stream ()
 {
-    safe_logger (spdlog::level::err, "AntNeuroBoard doesnt support MacOS.");
+    LOG_F(ERROR, "AntNeuroBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int AntNeuroBoard::start_stream (int buffer_size, const char *streamer_params)
 {
-    safe_logger (spdlog::level::err, "AntNeuroBoard doesnt support MacOS.");
+    LOG_F(ERROR, "AntNeuroBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 #endif

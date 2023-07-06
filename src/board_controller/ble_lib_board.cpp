@@ -52,11 +52,11 @@ bool BLELibBoard::init_dll_loader ()
             blelib_path = lib_name;
         }
 
-        Board::board_logger->debug ("use dyn lib: {}", blelib_path.c_str ());
+        LOG_F(1, "use dyn lib: {}", blelib_path.c_str ());
         BLELibBoard::dll_loader = new DLLLoader (blelib_path.c_str ());
         if (!BLELibBoard::dll_loader->load_library ())
         {
-            Board::board_logger->error ("failed to load lib");
+            LOG_F(ERROR, "failed to load lib");
             delete BLELibBoard::dll_loader;
             BLELibBoard::dll_loader = NULL;
         }
@@ -70,14 +70,14 @@ void BLELibBoard::simpleble_free (void *handle)
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return;
     }
     void (*func) (void *) =
         (void (*) (void *))BLELibBoard::dll_loader->get_address ("simpleble_free");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for simpleble_free");
+        LOG_F(ERROR, "failed to get function address for simpleble_free");
         return;
     }
 
@@ -89,15 +89,14 @@ size_t BLELibBoard::simpleble_adapter_get_count (void)
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return 0;
     }
     size_t (*func) (void) =
         (size_t (*) (void))BLELibBoard::dll_loader->get_address ("simpleble_adapter_get_count");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_adapter_get_count");
+        LOG_F(ERROR, "failed to get function address for simpleble_adapter_get_count");
         return 0;
     }
 
@@ -109,14 +108,14 @@ bool BLELibBoard::simpleble_adapter_is_bluetooth_enabled (void)
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return false;
     }
     bool (*func) (void) = (bool (*) (void))BLELibBoard::dll_loader->get_address (
         "simpleble_adapter_is_bluetooth_enabled");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_adapter_is_bluetooth_enabled");
         return false;
     }
@@ -129,15 +128,14 @@ simpleble_adapter_t BLELibBoard::simpleble_adapter_get_handle (size_t index)
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return NULL;
     }
     simpleble_adapter_t (*func) (size_t) = (simpleble_adapter_t (*) (
         size_t))BLELibBoard::dll_loader->get_address ("simpleble_adapter_get_handle");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_adapter_get_handle");
+        LOG_F(ERROR, "failed to get function address for simpleble_adapter_get_handle");
         return NULL;
     }
 
@@ -149,7 +147,7 @@ void BLELibBoard::simpleble_adapter_release_handle (simpleble_adapter_t handle)
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return;
     }
     void (*func) (simpleble_adapter_t) =
@@ -157,7 +155,7 @@ void BLELibBoard::simpleble_adapter_release_handle (simpleble_adapter_t handle)
             "simpleble_adapter_release_handle");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_adapter_release_handle");
         return;
     }
@@ -170,15 +168,14 @@ simpleble_err_t BLELibBoard::simpleble_adapter_scan_for (simpleble_adapter_t han
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_adapter_t, int) = (simpleble_err_t (*) (simpleble_adapter_t,
         int))BLELibBoard::dll_loader->get_address ("simpleble_adapter_scan_for");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_adapter_scan_for");
+        LOG_F(ERROR, "failed to get function address for simpleble_adapter_scan_for");
         return SIMPLEBLE_FAILURE;
     }
 
@@ -190,15 +187,14 @@ simpleble_err_t BLELibBoard::simpleble_adapter_scan_start (simpleble_adapter_t h
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_adapter_t) = (simpleble_err_t (*) (
         simpleble_adapter_t))BLELibBoard::dll_loader->get_address ("simpleble_adapter_scan_start");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_adapter_scan_start");
+        LOG_F(ERROR, "failed to get function address for simpleble_adapter_scan_start");
         return SIMPLEBLE_FAILURE;
     }
 
@@ -210,15 +206,14 @@ simpleble_err_t BLELibBoard::simpleble_adapter_scan_stop (simpleble_adapter_t ha
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_adapter_t) = (simpleble_err_t (*) (
         simpleble_adapter_t))BLELibBoard::dll_loader->get_address ("simpleble_adapter_scan_stop");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_adapter_scan_stop");
+        LOG_F(ERROR, "failed to get function address for simpleble_adapter_scan_stop");
         return SIMPLEBLE_FAILURE;
     }
 
@@ -234,7 +229,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_updated (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_adapter_t,
@@ -244,7 +239,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_updated (
             BLELibBoard::dll_loader->get_address ("simpleble_adapter_set_callback_on_scan_updated");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_adapter_set_callback_on_scan_updated");
         return SIMPLEBLE_FAILURE;
     }
@@ -258,7 +253,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_start (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_adapter_t, void (*) (simpleble_adapter_t, void *), void *) =
@@ -266,7 +261,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_start (
             BLELibBoard::dll_loader->get_address ("simpleble_adapter_set_callback_on_scan_start");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_adapter_set_callback_on_scan_start");
         return SIMPLEBLE_FAILURE;
     }
@@ -280,7 +275,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_stop (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_adapter_t, void (*) (simpleble_adapter_t, void *), void *) =
@@ -288,7 +283,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_stop (
             BLELibBoard::dll_loader->get_address ("simpleble_adapter_set_callback_on_scan_stop");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_adapter_set_callback_on_scan_stop");
         return SIMPLEBLE_FAILURE;
     }
@@ -305,7 +300,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_found (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_adapter_t,
@@ -315,7 +310,7 @@ simpleble_err_t BLELibBoard::simpleble_adapter_set_callback_on_scan_found (
             BLELibBoard::dll_loader->get_address ("simpleble_adapter_set_callback_on_scan_found");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_adapter_set_callback_on_scan_found");
         return SIMPLEBLE_FAILURE;
     }
@@ -328,7 +323,7 @@ char *BLELibBoard::simpleble_peripheral_address (simpleble_peripheral_t handle)
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return NULL;
     }
     char *(*func) (simpleble_peripheral_t) =
@@ -336,8 +331,7 @@ char *BLELibBoard::simpleble_peripheral_address (simpleble_peripheral_t handle)
             "simpleble_peripheral_address");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_peripheral_address");
+        LOG_F(ERROR, "failed to get function address for simpleble_peripheral_address");
         return NULL;
     }
 
@@ -349,7 +343,7 @@ char *BLELibBoard::simpleble_peripheral_identifier (simpleble_peripheral_t handl
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return NULL;
     }
     char *(*func) (simpleble_peripheral_t) =
@@ -357,7 +351,7 @@ char *BLELibBoard::simpleble_peripheral_identifier (simpleble_peripheral_t handl
             "simpleble_peripheral_identifier");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_identifier");
         return NULL;
     }
@@ -370,7 +364,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_connect (simpleble_peripheral_
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_peripheral_t) =
@@ -378,8 +372,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_connect (simpleble_peripheral_
             "simpleble_peripheral_connect");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_peripheral_connect");
+        LOG_F(ERROR, "failed to get function address for simpleble_peripheral_connect");
         return SIMPLEBLE_FAILURE;
     }
 
@@ -391,7 +384,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_disconnect (simpleble_peripher
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_peripheral_t) =
@@ -399,7 +392,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_disconnect (simpleble_peripher
             "simpleble_peripheral_disconnect");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_disconnect");
         return SIMPLEBLE_FAILURE;
     }
@@ -412,7 +405,7 @@ void BLELibBoard::simpleble_peripheral_release_handle (simpleble_peripheral_t ha
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return;
     }
     void (*func) (simpleble_peripheral_t) =
@@ -420,7 +413,7 @@ void BLELibBoard::simpleble_peripheral_release_handle (simpleble_peripheral_t ha
             "simpleble_peripheral_release_handle");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_release_handle");
         return;
     }
@@ -433,7 +426,7 @@ size_t BLELibBoard::simpleble_peripheral_services_count (simpleble_peripheral_t 
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return 0;
     }
     size_t (*func) (simpleble_peripheral_t) =
@@ -441,7 +434,7 @@ size_t BLELibBoard::simpleble_peripheral_services_count (simpleble_peripheral_t 
             "simpleble_peripheral_services_count");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_services_count");
         return 0;
     }
@@ -455,7 +448,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_services_get (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_peripheral_t, size_t, simpleble_service_t *) =
@@ -463,7 +456,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_services_get (
             BLELibBoard::dll_loader->get_address ("simpleble_peripheral_services_get");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_services_get");
         return SIMPLEBLE_FAILURE;
     }
@@ -478,7 +471,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_write_request (simpleble_perip
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (
@@ -487,7 +480,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_write_request (simpleble_perip
             size_t))BLELibBoard::dll_loader->get_address ("simpleble_peripheral_write_request");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_write_request");
         return SIMPLEBLE_FAILURE;
     }
@@ -501,7 +494,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_write_command (simpleble_perip
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (
@@ -510,7 +503,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_write_command (simpleble_perip
             size_t))BLELibBoard::dll_loader->get_address ("simpleble_peripheral_write_command");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_write_command");
         return SIMPLEBLE_FAILURE;
     }
@@ -527,7 +520,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_notify (simpleble_peripheral_t
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_peripheral_t, simpleble_uuid_t, simpleble_uuid_t,
@@ -537,8 +530,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_notify (simpleble_peripheral_t
             void *))BLELibBoard::dll_loader->get_address ("simpleble_peripheral_notify");
     if (func == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for simpleble_peripheral_notify");
+        LOG_F(ERROR, "failed to get function address for simpleble_peripheral_notify");
         return SIMPLEBLE_FAILURE;
     }
 
@@ -551,7 +543,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_unsubscribe (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_peripheral_t, simpleble_uuid_t,
@@ -559,7 +551,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_unsubscribe (
         simpleble_uuid_t))BLELibBoard::dll_loader->get_address ("simpleble_peripheral_unsubscribe");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_unsubscribe");
         return SIMPLEBLE_FAILURE;
     }
@@ -572,7 +564,7 @@ size_t BLELibBoard::simpleble_peripheral_manufacturer_data_count (simpleble_peri
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return 0;
     }
     size_t (*func) (simpleble_peripheral_t) =
@@ -580,7 +572,7 @@ size_t BLELibBoard::simpleble_peripheral_manufacturer_data_count (simpleble_peri
             "simpleble_peripheral_manufacturer_data_count");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_manufacturer_data_count");
         return 0;
     }
@@ -594,7 +586,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_manufacturer_data_get (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_peripheral_t, size_t, simpleble_manufacturer_data_t *) =
@@ -602,7 +594,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_manufacturer_data_get (
             BLELibBoard::dll_loader->get_address ("simpleble_peripheral_manufacturer_data_get");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_manufacturer_data_get");
         return SIMPLEBLE_FAILURE;
     }
@@ -616,7 +608,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_is_connected (
     std::lock_guard<std::mutex> lock (BLELibBoard::mutex);
     if (BLELibBoard::dll_loader == NULL)
     {
-        safe_logger (spdlog::level::err, "BLELibBoard::dll_loader is not initialized");
+        LOG_F(ERROR, "BLELibBoard::dll_loader is not initialized");
         return SIMPLEBLE_FAILURE;
     }
     simpleble_err_t (*func) (simpleble_peripheral_t, bool *) =
@@ -624,7 +616,7 @@ simpleble_err_t BLELibBoard::simpleble_peripheral_is_connected (
             "simpleble_peripheral_is_connected");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "failed to get function address for simpleble_peripheral_is_connected");
         return SIMPLEBLE_FAILURE;
     }

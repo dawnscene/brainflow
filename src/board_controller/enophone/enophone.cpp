@@ -33,12 +33,12 @@ int Enophone::start_stream (int buffer_size, const char *streamer_params)
 {
     if (!initialized)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before start_stream");
+        LOG_F(ERROR, "You need to call prepare_session before start_stream");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
 
@@ -67,7 +67,7 @@ int Enophone::start_stream (int buffer_size, const char *streamer_params)
     }
     else
     {
-        safe_logger (spdlog::level::err, "no data received in {} sec, stopping thread", num_secs);
+        LOG_F(ERROR, "no data received in {} sec, stopping thread", num_secs);
         stop_stream ();
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
@@ -131,7 +131,7 @@ void Enophone::read_thread ()
                 state = (int)BrainFlowExitCodes::STATUS_OK;
             }
             cv.notify_one ();
-            safe_logger (spdlog::level::debug, "start streaming");
+            LOG_F(1, "start streaming");
         }
 
         // check second byte is 'S'
@@ -187,7 +187,7 @@ void Enophone::read_thread ()
 
 int Enophone::config_board (std::string config, std::string &response)
 {
-    safe_logger (spdlog::level::debug, "config_board is not supported for Enophone");
+    LOG_F(1, "config_board is not supported for Enophone");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 

@@ -31,7 +31,7 @@ int OpenBCIWifiShieldBoard::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session already prepared");
+        LOG_F(INFO, "Session already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if (params.ip_address.empty ())
@@ -42,46 +42,46 @@ int OpenBCIWifiShieldBoard::prepare_session ()
     {
         http_timeout = params.timeout;
     }
-    safe_logger (spdlog::level::info, "use {} as http timeout", http_timeout);
+    LOG_F(INFO, "use {} as http timeout", http_timeout);
     // user doent need to provide this param because we have only tcp impl,
     // but if its specified and its UDP return an error
     if (params.ip_protocol == (int)IpProtocolTypes::UDP)
     {
-        safe_logger (spdlog::level::err, "ip protocol should be tcp");
+        LOG_F(ERROR, "ip protocol should be tcp");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     if (!params.ip_port)
     {
-        safe_logger (spdlog::level::err, "ip port is empty");
+        LOG_F(ERROR, "ip port is empty");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     char local_ip[80];
     int res = SocketClientUDP::get_local_ip_addr (params.ip_address.c_str (), 80, local_ip);
     if (res != 0)
     {
-        safe_logger (spdlog::level::err, "failed to get local ip addr: {}", res);
+        LOG_F(ERROR, "failed to get local ip addr: {}", res);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
-    safe_logger (spdlog::level::info, "local ip addr is {}", local_ip);
+    LOG_F(INFO, "local ip addr is {}", local_ip);
 
     server_socket = new SocketServerTCP (local_ip, params.ip_port, true);
     // bind socket
     res = server_socket->bind ();
     if (res != (int)SocketServerTCPReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to create server socket with addr {} and port {}",
+        LOG_F(ERROR, "failed to create server socket with addr {} and port {}",
             local_ip, params.ip_port);
         delete server_socket;
         server_socket = NULL;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
-    safe_logger (spdlog::level::trace, "bind socket, port  is {}", params.ip_port);
+    LOG_F(2, "bind socket, port  is {}", params.ip_port);
 
     // run accept in another thread to dont block
     res = server_socket->accept ();
     if (res != (int)SocketServerTCPReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "error in accept");
+        LOG_F(ERROR, "error in accept");
         delete server_socket;
         server_socket = NULL;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
@@ -91,7 +91,7 @@ int OpenBCIWifiShieldBoard::prepare_session ()
     http_t *request = http_get (url.c_str (), NULL);
     if (!request)
     {
-        safe_logger (spdlog::level::err, "error during request creation, to {}", url.c_str ());
+        LOG_F(ERROR, "error during request creation, to {}", url.c_str ());
         delete server_socket;
         server_socket = NULL;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
@@ -115,11 +115,11 @@ int OpenBCIWifiShieldBoard::prepare_session ()
     post_data["delimiter"] = true;
     post_data["latency"] = 10000;
     std::string post_str = post_data.dump ();
-    safe_logger (spdlog::level::info, "configuration string {}", post_str.c_str ());
+    LOG_F(INFO, "configuration string {}", post_str.c_str ());
     request = http_post (url.c_str (), post_str.c_str (), strlen (post_str.c_str ()), NULL);
     if (!request)
     {
-        safe_logger (spdlog::level::err, "error during request creation, to {}", url.c_str ());
+        LOG_F(ERROR, "error during request creation, to {}", url.c_str ());
         delete server_socket;
         server_socket = NULL;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
@@ -138,10 +138,10 @@ int OpenBCIWifiShieldBoard::prepare_session ()
     int max_attempts = 10;
     for (int i = 0; i < max_attempts; i++)
     {
-        safe_logger (spdlog::level::trace, "waiting for accept {}/{}", i, max_attempts);
+        LOG_F(2, "waiting for accept {}/{}", i, max_attempts);
         if (server_socket->client_connected)
         {
-            safe_logger (spdlog::level::trace, "connected");
+            LOG_F(2, "connected");
             break;
         }
         else
@@ -155,7 +155,7 @@ int OpenBCIWifiShieldBoard::prepare_session ()
     }
     if (!server_socket->client_connected)
     {
-        safe_logger (spdlog::level::trace, "failed to establish connection");
+        LOG_F(2, "failed to establish connection");
         delete server_socket;
         server_socket = NULL;
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
@@ -187,11 +187,11 @@ int OpenBCIWifiShieldBoard::send_config (const char *config)
     json post_data;
     post_data["command"] = std::string (config);
     std::string post_str = post_data.dump ();
-    safe_logger (spdlog::level::info, "command string {}", post_str.c_str ());
+    LOG_F(INFO, "command string {}", post_str.c_str ());
     http_t *request = http_post (url.c_str (), post_str.c_str (), strlen (post_str.c_str ()), NULL);
     if (!request)
     {
-        safe_logger (spdlog::level::err, "error during request creation, to {}", url.c_str ());
+        LOG_F(ERROR, "error during request creation, to {}", url.c_str ());
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     int send_res = wait_for_http_resp (request);
@@ -204,11 +204,11 @@ int OpenBCIWifiShieldBoard::send_config (const char *config)
 
     if (keep_alive)
     {
-        safe_logger (spdlog::level::warn,
+        LOG_F(WARNING,
             "You are changing board params during streaming, it may lead to sync mismatch between "
             "data acquisition thread and device");
     }
-    safe_logger (spdlog::level::warn, "If you change gain you may need to rescale EXG data");
+    LOG_F(WARNING, "If you change gain you may need to rescale EXG data");
 
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
@@ -222,7 +222,7 @@ int OpenBCIWifiShieldBoard::start_stream (int buffer_size, const char *streamer_
 {
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     int res = prepare_for_acquisition (buffer_size, streamer_params);
@@ -235,7 +235,7 @@ int OpenBCIWifiShieldBoard::start_stream (int buffer_size, const char *streamer_
     http_t *request = http_get (url.c_str (), NULL);
     if (!request)
     {
-        safe_logger (spdlog::level::err, "error during request creation, to {}", url.c_str ());
+        LOG_F(ERROR, "error during request creation, to {}", url.c_str ());
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     int send_res = wait_for_http_resp (request);
@@ -262,7 +262,7 @@ int OpenBCIWifiShieldBoard::stop_stream ()
         http_t *request = http_get (url.c_str (), NULL);
         if (!request)
         {
-            safe_logger (spdlog::level::err, "error during request creation, to {}", url.c_str ());
+            LOG_F(ERROR, "error during request creation, to {}", url.c_str ());
             return (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
         int send_res = wait_for_http_resp (request);
@@ -301,7 +301,7 @@ int OpenBCIWifiShieldBoard::release_session ()
 
 std::string OpenBCIWifiShieldBoard::find_wifi_shield ()
 {
-    safe_logger (spdlog::level::info, "trying to autodiscover wifi shield using SSDP");
+    LOG_F(INFO, "trying to autodiscover wifi shield using SSDP");
     // try to find device using SSDP if there is an error try to use ip address for direct mode
     // instead throwing exception
     std::string ip_address = "192.168.4.1";
@@ -317,7 +317,7 @@ std::string OpenBCIWifiShieldBoard::find_wifi_shield ()
              "\r\n"
              "\r\n");
 
-        safe_logger (spdlog::level::trace, "Using search request {}", msearch.c_str ());
+        LOG_F(2, "Using search request {}", msearch.c_str ());
 
         res = (int)udp_client.send (msearch.c_str (), (int)msearch.size ());
         if (res == msearch.size ())
@@ -327,7 +327,7 @@ std::string OpenBCIWifiShieldBoard::find_wifi_shield ()
             if (res == 250)
             {
                 std::string response ((const char *)b);
-                safe_logger (spdlog::level::trace, "Recived package {}", b);
+                LOG_F(2, "Recived package {}", (const char *)b);
                 std::regex rgx ("LOCATION: http://([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)");
                 std::smatch matches;
                 if (std::regex_search (response, matches, rgx) == true)
@@ -338,32 +338,32 @@ std::string OpenBCIWifiShieldBoard::find_wifi_shield ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "invalid number of groups found");
+                        LOG_F(ERROR, "invalid number of groups found");
                     }
                 }
                 else
                 {
-                    safe_logger (spdlog::level::err, "failed to find shield ip address");
+                    LOG_F(ERROR, "failed to find shield ip address");
                 }
             }
             else
             {
-                safe_logger (spdlog::level::err, "Recv res {}", res);
+                LOG_F(ERROR, "Recv res {}", res);
             }
         }
         else
         {
-            safe_logger (spdlog::level::err, "Sent res {}", res);
+            LOG_F(ERROR, "Sent res {}", res);
         }
     }
     else
     {
-        safe_logger (spdlog::level::err, "Failed to connect socket {}", res);
+        LOG_F(ERROR, "Failed to connect socket {}", res);
     }
 
     udp_client.close ();
 
-    safe_logger (spdlog::level::info, "use ip address {}", ip_address.c_str ());
+    LOG_F(INFO, "use ip address {}", ip_address.c_str ());
     return ip_address;
 }
 
@@ -379,13 +379,13 @@ int OpenBCIWifiShieldBoard::wait_for_http_resp (http_t *request)
         i++;
         if (i == max_attempts)
         {
-            safe_logger (spdlog::level::err, "still pending after {} seconds", http_timeout);
+            LOG_F(ERROR, "still pending after {} seconds", http_timeout);
             return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
         }
         status = http_process (request);
         if (prev_size != (int)request->response_size)
         {
-            safe_logger (spdlog::level::trace, "recieved {} bytes", (int)request->response_size);
+            LOG_F(2, "recieved {} bytes", (int)request->response_size);
             prev_size = (int)request->response_size;
         }
 #ifdef _WIN32
@@ -396,12 +396,11 @@ int OpenBCIWifiShieldBoard::wait_for_http_resp (http_t *request)
     }
     if (request->response_data != NULL)
     {
-        safe_logger (
-            spdlog::level::trace, "response data {}", (char const *)request->response_data);
+        LOG_F(2, "response data {}", (char const *)request->response_data);
     }
     if (status == HTTP_STATUS_FAILED)
     {
-        safe_logger (spdlog::level::err, "request failed");
+        LOG_F(ERROR, "request failed");
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;

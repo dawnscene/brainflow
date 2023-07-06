@@ -71,12 +71,12 @@ int BrainBitBLED::prepare_session ()
 {
     if (!is_valid)
     {
-        safe_logger (spdlog::level::info, "only one BrainBitBLED per process is allowed");
+        LOG_F(INFO, "only one BrainBitBLED per process is allowed");
         return (int)BrainFlowExitCodes::ANOTHER_BOARD_IS_CREATED_ERROR;
     }
     if (params.serial_port.empty ())
     {
-        safe_logger (spdlog::level::err, "you need to specify dongle port");
+        LOG_F(ERROR, "you need to specify dongle port");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     return DynLibBoard::prepare_session ();
@@ -94,11 +94,10 @@ int BrainBitBLED::call_open ()
         int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("open_device_mac_addr");
         if (func == NULL)
         {
-            safe_logger (
-                spdlog::level::err, "failed to get function address for open_device_mac_addr");
+            LOG_F(ERROR, "failed to get function address for open_device_mac_addr");
             return (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
-        safe_logger (spdlog::level::info, "search for {}", params.mac_address.c_str ());
+        LOG_F(INFO, "search for {}", params.mac_address.c_str ());
         res = func (const_cast<char *> (params.mac_address.c_str ()));
     }
     else
@@ -106,11 +105,10 @@ int BrainBitBLED::call_open ()
         int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("open_device");
         if (func == NULL)
         {
-            safe_logger (spdlog::level::err, "failed to get function address for open_device");
+            LOG_F(ERROR, "failed to get function address for open_device");
             return (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
-        safe_logger (
-            spdlog::level::info, "mac address is not specified, try to find brainbit without it");
+        LOG_F(INFO, "mac address is not specified, try to find brainbit without it");
         res = func (NULL);
     }
     return res;

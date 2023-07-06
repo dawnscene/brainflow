@@ -28,7 +28,7 @@ int NotionOSC::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     int port = 9000;
@@ -36,13 +36,13 @@ int NotionOSC::prepare_session ()
     {
         port = params.ip_port;
     }
-    safe_logger (spdlog::level::debug, "Use IP port {}", port);
+    LOG_F(1, "Use IP port {}", port);
 
     socket = new BroadCastClient (port);
     int res = socket->init ();
     if (res != (int)BroadCastClientReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to init socket: {}", res);
+        LOG_F(ERROR, "failed to init socket: {}", res);
         delete socket;
         socket = NULL;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
@@ -53,7 +53,7 @@ int NotionOSC::prepare_session ()
 
 int NotionOSC::config_board (std::string config, std::string &response)
 {
-    safe_logger (spdlog::level::err, "Notion OSC doesnt support config_board");
+    LOG_F(ERROR, "Notion OSC doesnt support config_board");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
@@ -61,12 +61,12 @@ int NotionOSC::start_stream (int buffer_size, const char *streamer_params)
 {
     if (!initialized)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        LOG_F(ERROR, "You need to call prepare_session before config_board");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     int res = prepare_for_acquisition (buffer_size, streamer_params);
@@ -87,7 +87,7 @@ int NotionOSC::start_stream (int buffer_size, const char *streamer_params)
     }
     else
     {
-        safe_logger (spdlog::level::err, "no data received in 5sec, stopping thread");
+        LOG_F(ERROR, "no data received in 5sec, stopping thread");
         this->stop_stream ();
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
@@ -146,9 +146,9 @@ void NotionOSC::read_thread ()
         if (res == -1)
         {
 #ifdef _WIN32
-            safe_logger (spdlog::level::err, "WSAGetLastError is {}", WSAGetLastError ());
+            LOG_F(ERROR, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-            safe_logger (spdlog::level::err, "errno {} message {}", errno, strerror (errno));
+            LOG_F(ERROR, "errno {} message {}", errno, strerror (errno));
 #endif
             continue;
         }
@@ -156,14 +156,14 @@ void NotionOSC::read_thread ()
         {
             if (state != (int)BrainFlowExitCodes::STATUS_OK)
             {
-                safe_logger (spdlog::level::info,
+                LOG_F(INFO,
                     "received first package with {} bytes streaming is started", res);
                 {
                     std::lock_guard<std::mutex> lk (m);
                     state = (int)BrainFlowExitCodes::STATUS_OK;
                 }
                 cv.notify_one ();
-                safe_logger (spdlog::level::debug, "start streaming");
+                LOG_F(1, "start streaming");
             }
             try
             {
@@ -202,7 +202,7 @@ void NotionOSC::handle_packet (double *package, const OSCPP::Server::Packet &pac
             {
                 if (msg_address.find (params.serial_number) == std::string::npos)
                 {
-                    safe_logger (spdlog::level::trace,
+                    LOG_F(2,
                         "found package from different device. Check provided serial number");
                     return;
                 }
@@ -221,7 +221,7 @@ void NotionOSC::handle_packet (double *package, const OSCPP::Server::Packet &pac
                 }
                 if (counter != 8)
                 {
-                    safe_logger (spdlog::level::trace,
+                    LOG_F(2,
                         "wrong format for eeg data, must be 8 values, found {}", counter);
                 }
                 std::string timestamp_str = args.string ();
@@ -239,21 +239,19 @@ void NotionOSC::handle_packet (double *package, const OSCPP::Server::Packet &pac
                     }
                     catch (...)
                     {
-                        safe_logger (
-                            spdlog::level::err, "For BrainFlow marker should be numeric value.");
+                        LOG_F(ERROR, "For BrainFlow marker should be numeric value.");
                     }
                 }
                 push_package (package);
             }
             catch (std::exception &e)
             {
-                safe_logger (
-                    spdlog::level::trace, "Exception in parsing OSC packet: {}", e.what ());
+                LOG_F(2, "Exception in parsing OSC packet: {}", e.what ());
             }
         }
         else
         {
-            safe_logger (spdlog::level::trace, "Unknown msg: {}", msg_address.c_str ());
+            LOG_F(2, "Unknown msg: {}", msg_address.c_str ());
         }
     }
 }

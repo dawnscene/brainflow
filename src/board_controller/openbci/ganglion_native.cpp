@@ -53,30 +53,30 @@ int GanglionNative::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if (params.timeout < 1)
     {
         params.timeout = 5;
     }
-    safe_logger (spdlog::level::info, "Use timeout for discovery: {}", params.timeout);
+    LOG_F(INFO, "Use timeout for discovery: {}", params.timeout);
     if (!init_dll_loader ())
     {
-        safe_logger (spdlog::level::err, "Failed to init dll_loader");
+        LOG_F(ERROR, "Failed to init dll_loader");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     size_t adapter_count = simpleble_adapter_get_count ();
     if (adapter_count == 0)
     {
-        safe_logger (spdlog::level::err, "No BLE adapters found");
+        LOG_F(ERROR, "No BLE adapters found");
         return (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
     }
 
     ganglion_adapter = simpleble_adapter_get_handle (0);
     if (ganglion_adapter == NULL)
     {
-        safe_logger (spdlog::level::err, "Adapter is NULL");
+        LOG_F(ERROR, "Adapter is NULL");
         return (int)BrainFlowExitCodes::UNABLE_TO_OPEN_PORT_ERROR;
     }
 
@@ -95,7 +95,7 @@ int GanglionNative::prepare_session ()
 
     if (!simpleble_adapter_is_bluetooth_enabled ())
     {
-        safe_logger (spdlog::level::warn, "Probably bluetooth is disabled.");
+        LOG_F(WARNING, "Probably bluetooth is disabled.");
         // dont throw an exception because of this
         // https://github.com/OpenBluetoothToolbox/SimpleBLE/issues/115
     }
@@ -107,11 +107,11 @@ int GanglionNative::prepare_session ()
     if (cv.wait_for (
             lk, params.timeout * sec, [this] { return this->ganglion_peripheral != NULL; }))
     {
-        safe_logger (spdlog::level::info, "Found GanglionNative device");
+        LOG_F(INFO, "Found GanglionNative device");
     }
     else
     {
-        safe_logger (spdlog::level::err, "Failed to find Ganglion Device");
+        LOG_F(ERROR, "Failed to find Ganglion Device");
         res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
     simpleble_adapter_scan_stop (ganglion_adapter);
@@ -119,11 +119,11 @@ int GanglionNative::prepare_session ()
     {
         if (simpleble_peripheral_connect (ganglion_peripheral) == SIMPLEBLE_SUCCESS)
         {
-            safe_logger (spdlog::level::info, "Connected to GanglionNative Device");
+            LOG_F(INFO, "Connected to GanglionNative Device");
         }
         else
         {
-            safe_logger (spdlog::level::err, "Failed to connect to GanglionNative Device");
+            LOG_F(ERROR, "Failed to connect to GanglionNative Device");
             res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
         }
     }
@@ -146,14 +146,14 @@ int GanglionNative::prepare_session ()
             if (simpleble_peripheral_services_get (ganglion_peripheral, i, &service) !=
                 SIMPLEBLE_SUCCESS)
             {
-                safe_logger (spdlog::level::err, "failed to get service");
+                LOG_F(ERROR, "failed to get service");
                 res = (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
             }
 
-            safe_logger (spdlog::level::trace, "found servce {}", service.uuid.value);
+            LOG_F(2, "found servce {}", service.uuid.value);
             for (size_t j = 0; j < service.characteristic_count; j++)
             {
-                safe_logger (spdlog::level::trace, "found characteristic {}",
+                LOG_F(2, "found characteristic {}",
                     service.characteristics[j].uuid.value);
 
                 if (strcmp (service.characteristics[j].uuid.value,
@@ -176,7 +176,7 @@ int GanglionNative::prepare_session ()
                     }
                     else
                     {
-                        safe_logger (spdlog::level::err, "Failed to notify for {} {}",
+                        LOG_F(ERROR, "Failed to notify for {} {}",
                             service.uuid.value, service.characteristics[j].uuid.value);
                         res = (int)BrainFlowExitCodes::GENERAL_ERROR;
                     }
@@ -258,7 +258,7 @@ int GanglionNative::release_session ()
                     notified_characteristics.first,
                     notified_characteristics.second) != SIMPLEBLE_SUCCESS)
             {
-                safe_logger (spdlog::level::err, "failed to unsubscribe for {} {}",
+                LOG_F(ERROR, "failed to unsubscribe for {} {}",
                     notified_characteristics.first.value, notified_characteristics.second.value);
             }
             else
@@ -314,7 +314,7 @@ int GanglionNative::config_board (std::string config)
         bool was_streaming = is_streaming;
         if (was_streaming)
         {
-            safe_logger (spdlog::level::trace,
+            LOG_F(2,
                 "disabling streaming to turn on or off impedance, stop command is: {}",
                 stop_command.c_str ());
             res = send_command (stop_command);
@@ -337,7 +337,7 @@ int GanglionNative::config_board (std::string config)
         {
             if (res == (int)BrainFlowExitCodes::STATUS_OK)
             {
-                safe_logger (spdlog::level::trace,
+                LOG_F(2,
                     "enabling streaming to turn on or off impedance, start command is: {}",
                     start_command.c_str ());
                 res = send_command (start_command);
@@ -370,7 +370,7 @@ int GanglionNative::send_command (std::string config)
     if (simpleble_peripheral_write_command (ganglion_peripheral, write_characteristics.first,
             write_characteristics.second, command, config.size ()) != SIMPLEBLE_SUCCESS)
     {
-        safe_logger (spdlog::level::err, "failed to send command {} to device", config.c_str ());
+        LOG_F(ERROR, "failed to send command {} to device", config.c_str ());
         delete[] command;
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
@@ -380,12 +380,12 @@ int GanglionNative::send_command (std::string config)
 
 void GanglionNative::adapter_1_on_scan_start (simpleble_adapter_t adapter)
 {
-    safe_logger (spdlog::level::trace, "Scan started");
+    LOG_F(2, "Scan started");
 }
 
 void GanglionNative::adapter_1_on_scan_stop (simpleble_adapter_t adapter)
 {
-    safe_logger (spdlog::level::trace, "Scan stopped");
+    LOG_F(2, "Scan stopped");
 }
 
 void GanglionNative::adapter_1_on_scan_found (
@@ -424,9 +424,9 @@ void GanglionNative::adapter_1_on_scan_found (
         }
     }
 
-    safe_logger (spdlog::level::trace, "address {}", peripheral_address);
+    LOG_F(2, "address {}", peripheral_address);
     simpleble_free (peripheral_address);
-    safe_logger (spdlog::level::trace, "identifier {}", peripheral_identified);
+    LOG_F(2, "identifier {}", peripheral_identified);
     simpleble_free (peripheral_identified);
 
     if (found)
@@ -448,7 +448,7 @@ void GanglionNative::read_data (
 {
     if (size < 2)
     {
-        safe_logger (spdlog::level::warn, "unexpected number of bytes received: {}", size);
+        LOG_F(WARNING, "unexpected number of bytes received: {}", size);
         return;
     }
     int num_rows = board_descr["default"]["num_rows"];
@@ -546,8 +546,7 @@ void GanglionNative::read_data (
         }
         catch (...)
         {
-            safe_logger (
-                spdlog::level::err, "failed to parse impedance data: {}", asci_value.c_str ());
+            LOG_F(ERROR, "failed to parse impedance data: {}", asci_value.c_str ());
             delete[] package;
             return;
         }
@@ -592,7 +591,7 @@ void GanglionNative::read_data (
     {
         for (int i = 0; i < 20; i++)
         {
-            safe_logger (spdlog::level::warn, "byte {} value {}", i, data[i]);
+            LOG_F(WARNING, "byte {} value {}", i, data[i]);
         }
         delete[] package;
         return;

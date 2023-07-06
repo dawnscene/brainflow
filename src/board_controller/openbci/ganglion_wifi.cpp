@@ -25,8 +25,7 @@ int GanglionWifi::config_board (std::string conf, std::string &response)
     }
     if ((keep_alive) && ((config[0] == 'z') || (config[0] == 'Z')))
     {
-        safe_logger (
-            spdlog::level::err, "For Ganglion WIFI impedance works only if streaming is stopped");
+        LOG_F(ERROR, "For Ganglion WIFI impedance works only if streaming is stopped");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     if (config[0] == 'z')
@@ -46,7 +45,7 @@ int GanglionWifi::start_stream (int buffer_size, const char *streamer_params)
 {
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
 
@@ -79,7 +78,7 @@ int GanglionWifi::start_stream (int buffer_size, const char *streamer_params)
         http_t *request = http_get (url.c_str (), NULL);
         if (!request)
         {
-            safe_logger (spdlog::level::err, "error during request creation, to {}", url.c_str ());
+            LOG_F(ERROR, "error during request creation, to {}", url.c_str ());
             return (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
         int send_res = wait_for_http_resp (request);
@@ -114,7 +113,7 @@ int GanglionWifi::stop_stream ()
         http_t *request = http_get (url.c_str (), NULL);
         if (!request)
         {
-            safe_logger (spdlog::level::err, "error during request creation, to {}", url.c_str ());
+            LOG_F(ERROR, "error during request creation, to {}", url.c_str ());
             return (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
         int send_res = wait_for_http_resp (request);
@@ -165,9 +164,9 @@ void GanglionWifi::read_thread ()
             if (res < 0)
             {
 #ifdef _WIN32
-                safe_logger (spdlog::level::warn, "WSAGetLastError is {}", WSAGetLastError ());
+                LOG_F(WARNING, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-                safe_logger (spdlog::level::warn, "errno {} message {}", errno, strerror (errno));
+                LOG_F(WARNING, "errno {} message {}", errno, strerror (errno));
 #endif
             }
 
@@ -180,7 +179,7 @@ void GanglionWifi::read_thread ()
         }
         if ((b[32] < END_BYTE_STANDARD) || (b[32] > END_BYTE_MAX))
         {
-            safe_logger (spdlog::level::warn, "Wrong end byte, found {}", b[32]);
+            LOG_F(WARNING, "Wrong end byte, found {}", b[32]);
             continue;
         }
 
@@ -248,13 +247,13 @@ void GanglionWifi::read_thread_impedance ()
         res = server_socket->recv (b, OpenBCIWifiShieldBoard::package_size);
         if (res != OpenBCIWifiShieldBoard::package_size)
         {
-            safe_logger (spdlog::level::warn, "recv result: {}", res);
+            LOG_F(WARNING, "recv result: {}", res);
             if (res == -1)
             {
 #ifdef _WIN32
-                safe_logger (spdlog::level::warn, "WSAGetLastError is {}", WSAGetLastError ());
+                LOG_F(WARNING, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-                safe_logger (spdlog::level::warn, "errno {} message {}", errno, strerror (errno));
+                LOG_F(WARNING, "errno {} message {}", errno, strerror (errno));
 #endif
             }
 
@@ -284,17 +283,15 @@ void GanglionWifi::read_thread_impedance ()
         }
         catch (...)
         {
-            safe_logger (
-                spdlog::level::err, "failed to parse impedance data: {}", asci_value.c_str ());
+            LOG_F(ERROR, "failed to parse impedance data: {}", asci_value.c_str ());
             continue;
         }
 
         // channel_num starts from 1, first resistance channel is 18
-        safe_logger (
-            spdlog::level::trace, "resistance value is {}, channel number is {}", val, channel_num);
+        LOG_F(2, "resistance value is {}, channel number is {}", val, channel_num);
         if (!((channel_num > 0) && (channel_num < 6)))
         {
-            safe_logger (spdlog::level::warn, "channel number is {}", channel_num);
+            LOG_F(WARNING, "channel number is {}", channel_num);
             continue;
         }
         package[18 + channel_num - 1] = val;

@@ -8,35 +8,49 @@
 #include "file_streamer.h"
 #include "multicast_streamer.h"
 
-#include "spdlog/sinks/null_sink.h"
-
-#define LOGGER_NAME "board_logger"
-
-#ifdef __ANDROID__
-#include "spdlog/sinks/android_sink.h"
-std::shared_ptr<spdlog::logger> Board::board_logger =
-    spdlog::android_logger (LOGGER_NAME, "brainflow_ndk_logger");
-#else
-std::shared_ptr<spdlog::logger> Board::board_logger = spdlog::stderr_logger_mt (LOGGER_NAME);
-#endif
+#include "loguru.cpp"
 
 JNIEnv *Board::java_jnienv = nullptr;
 
 int Board::set_log_level (int level)
 {
-    int log_level = level;
-    if (level > 6)
-    {
-        log_level = 6;
+    int log_level;
+    switch ((LogLevels)level) {
+        case LogLevels::LEVEL_TRACE:
+            log_level = loguru::Verbosity_2;
+            break;
+        case LogLevels::LEVEL_DEBUG:
+            log_level = loguru::Verbosity_1;
+            break;
+        case LogLevels::LEVEL_INFO:
+            log_level = loguru::Verbosity_INFO;
+            break;
+        case LogLevels::LEVEL_WARN:
+            log_level = loguru::Verbosity_WARNING;
+            break;
+        case LogLevels::LEVEL_ERROR:
+            log_level = loguru::Verbosity_ERROR;
+            break;
+        case LogLevels::LEVEL_CRITICAL:
+            log_level = loguru::Verbosity_FATAL;
+            break;
+        case LogLevels::LEVEL_OFF:
+            log_level = loguru::Verbosity_OFF;
+            break;
+        default:
+            log_level = loguru::Verbosity_INFO;
+            break;
     }
-    if (level < 0)
-    {
-        log_level = 0;
-    }
+
+    std::string str = std::to_string(log_level);
+    const char *log_level_str = str.c_str();
+
     try
     {
-        Board::board_logger->set_level (spdlog::level::level_enum (log_level));
-        Board::board_logger->flush_on (spdlog::level::level_enum (log_level));
+        int argc = 3;
+        const char *argv[4] = {"brainflow", "-v", log_level_str, nullptr};
+        
+        loguru::init(argc, (char**)argv);
     }
     catch (...)
     {
@@ -45,22 +59,33 @@ int Board::set_log_level (int level)
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
 
-int Board::set_log_file (const char *log_file)
+int Board::add_log_file (const char *log_file, loguru::FileMode mode, loguru::Verbosity verbosity)
 {
 #ifdef __ANDROID__
-    Board::board_logger->error ("For Android set_log_file is unavailable");
+    LOG_F(ERROR, "For Android add_log_file is unavailable");
     return (int)BrainFlowExitCodes::GENERAL_ERROR;
 #else
     try
     {
-        spdlog::level::level_enum level = Board::board_logger->level ();
-        Board::board_logger = spdlog::create<spdlog::sinks::null_sink_st> (
-            "null_logger"); // to dont set logger to nullptr and avoid race condition
-        spdlog::drop (LOGGER_NAME);
-        Board::board_logger = spdlog::basic_logger_mt (LOGGER_NAME, log_file);
-        Board::board_logger->set_level (level);
-        Board::board_logger->flush_on (level);
-        spdlog::drop ("null_logger");
+        loguru::add_file(log_file, mode, verbosity);
+    }
+    catch (...)
+    {
+        return (int)BrainFlowExitCodes::GENERAL_ERROR;
+    }
+    return (int)BrainFlowExitCodes::STATUS_OK;
+#endif
+}
+
+int Board::add_callback(const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity)
+{
+#ifdef __ANDROID__
+    LOG_F(ERROR, "For Android add_callback is unavailable");
+    return (int)BrainFlowExitCodes::GENERAL_ERROR;
+#else
+    try
+    {
+        loguru::add_callback(id, callback, user_data, verbosity);
     }
     catch (...)
     {
@@ -74,7 +99,7 @@ int Board::prepare_for_acquisition (int buffer_size, const char *streamer_params
 {
     if (buffer_size <= 0 || buffer_size > MAX_CAPTURE_SAMPLES)
     {
-        safe_logger (spdlog::level::err, "invalid array size");
+        LOG_F(ERROR, "invalid array size");
         return (int)BrainFlowExitCodes::INVALID_BUFFER_SIZE_ERROR;
     }
 
@@ -104,13 +129,13 @@ int Board::prepare_for_acquisition (int buffer_size, const char *streamer_params
             if (std::find (supported_presets.begin (), supported_presets.end (), key) ==
                 supported_presets.end ())
             {
-                safe_logger (spdlog::level::err, "Preset {} is not supported", key);
+                LOG_F(ERROR, "Preset {} is not supported", key);
                 return (int)BrainFlowExitCodes::GENERAL_ERROR;
             }
 
             if (board_preset.find (field) == board_preset.end ())
             {
-                safe_logger (spdlog::level::err,
+                LOG_F(ERROR,
                     "Field {} is not found in brainflow_boards.h for id {}", field, board_id);
                 return (int)BrainFlowExitCodes::GENERAL_ERROR;
             }
@@ -130,8 +155,7 @@ int Board::prepare_for_acquisition (int buffer_size, const char *streamer_params
             DataBuffer *db = new DataBuffer ((int)board_preset["num_rows"], buffer_size);
             if (!db->is_ready ())
             {
-                safe_logger (
-                    spdlog::level::err, "unable to prepare buffer with size {}", buffer_size);
+                LOG_F(ERROR, "unable to prepare buffer with size {}", buffer_size);
                 delete db;
                 db = NULL;
                 res = (int)BrainFlowExitCodes::INVALID_BUFFER_SIZE_ERROR;
@@ -158,7 +182,7 @@ void Board::push_package (double *package, int preset)
     std::string preset_str = preset_to_string (preset);
     if ((board_descr.find (preset_str) == board_descr.end ()) || (dbs.find (preset) == dbs.end ()))
     {
-        safe_logger (spdlog::level::err, "invalid json or push_package args, no such key");
+        LOG_F(ERROR, "invalid json or push_package args, no such key");
         return;
     }
 
@@ -180,7 +204,7 @@ void Board::push_package (double *package, int preset)
     }
     catch (...)
     {
-        safe_logger (spdlog::level::err, "Failed to get marker channel/value");
+        LOG_F(ERROR, "Failed to get marker channel/value");
     }
 
     if (dbs[preset] != NULL)
@@ -201,14 +225,14 @@ int Board::insert_marker (double value, int preset)
 {
     if (std::fabs (value) < std::numeric_limits<double>::epsilon ())
     {
-        safe_logger (spdlog::level::err, "0 is a default value for marker, you can not use it.");
+        LOG_F(ERROR, "0 is a default value for marker, you can not use it.");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     std::string preset_str = preset_to_string (preset);
     if ((board_descr.find (preset_str) == board_descr.end ()) ||
         (marker_queues.find (preset) == marker_queues.end ()))
     {
-        safe_logger (spdlog::level::err, "invalid preset");
+        LOG_F(ERROR, "invalid preset");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     lock.lock ();
@@ -250,7 +274,7 @@ int Board::add_streamer (const char *streamer_params, int preset)
     std::string preset_str = preset_to_string (preset);
     if (board_descr.find (preset_str) == board_descr.end ())
     {
-        safe_logger (spdlog::level::err, "invalid preset");
+        LOG_F(ERROR, "invalid preset");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     int num_rows = (int)board_descr[preset_str]["num_rows"];
@@ -266,7 +290,7 @@ int Board::add_streamer (const char *streamer_params, int preset)
 
     if (streamer_type == "file")
     {
-        safe_logger (spdlog::level::trace, "File Streamer, file: {}, mods: {}",
+        LOG_F(2, "File Streamer, file: {}, mods: {}",
             streamer_dest.c_str (), streamer_mods.c_str ());
         streamer = new FileStreamer (streamer_dest.c_str (), streamer_mods.c_str (), num_rows);
     }
@@ -279,24 +303,24 @@ int Board::add_streamer (const char *streamer_params, int preset)
         }
         catch (const std::exception &e)
         {
-            safe_logger (spdlog::level::err, e.what ());
+            LOG_F(ERROR, e.what ());
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
-        safe_logger (spdlog::level::trace, "MultiCast Streamer, ip addr: {}, port: {}",
+        LOG_F(2, "MultiCast Streamer, ip addr: {}, port: {}",
             streamer_dest.c_str (), streamer_mods.c_str ());
         streamer = new MultiCastStreamer (streamer_dest.c_str (), port, num_rows);
     }
 
     if (streamer == NULL)
     {
-        safe_logger (spdlog::level::err, "unsupported streamer type {}", streamer_type.c_str ());
+        LOG_F(ERROR, "unsupported streamer type {}", streamer_type.c_str ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
     res = streamer->init_streamer ();
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to init streamer");
+        LOG_F(ERROR, "failed to init streamer");
         delete streamer;
         streamer = NULL;
     }
@@ -314,7 +338,7 @@ int Board::delete_streamer (const char *streamer_params, int preset)
 {
     if (streamers.find (preset) == streamers.end ())
     {
-        safe_logger (spdlog::level::err, "no such streaming preset");
+        LOG_F(ERROR, "no such streaming preset");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     std::string streamer_type = "";
@@ -337,7 +361,7 @@ int Board::delete_streamer (const char *streamer_params, int preset)
             it = streamers[preset].erase (it);
             lock.unlock ();
             res = (int)BrainFlowExitCodes::STATUS_OK;
-            safe_logger (spdlog::level::info, "streamer {} removed", streamer_params);
+            LOG_F(INFO, "streamer {} removed", streamer_params);
             break;
         }
         else
@@ -348,7 +372,7 @@ int Board::delete_streamer (const char *streamer_params, int preset)
 
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "no such streamer found");
+        LOG_F(ERROR, "no such streamer found");
     }
     return res;
 }
@@ -358,7 +382,7 @@ int Board::parse_streamer_params (const char *streamer_params, std::string &stre
 {
     if ((streamer_params == NULL) || (streamer_params[0] == '\0'))
     {
-        safe_logger (spdlog::level::err, "invalid streamer params");
+        LOG_F(ERROR, "invalid streamer params");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -367,13 +391,13 @@ int Board::parse_streamer_params (const char *streamer_params, std::string &stre
     size_t idx1 = streamer_params_str.find ("://");
     if (idx1 == std::string::npos)
     {
-        safe_logger (spdlog::level::err, "format is streamer_type://streamer_dest:streamer_args");
+        LOG_F(ERROR, "format is streamer_type://streamer_dest:streamer_args");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     size_t idx2 = streamer_params_str.find_last_of (":", std::string::npos);
     if ((idx2 == std::string::npos) || (idx1 == idx2))
     {
-        safe_logger (spdlog::level::err, "format is streamer_type://streamer_dest:streamer_args");
+        LOG_F(ERROR, "format is streamer_type://streamer_dest:streamer_args");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -390,12 +414,12 @@ int Board::get_current_board_data (
     std::string preset_str = preset_to_string (preset);
     if (board_descr.find (preset_str) == board_descr.end ())
     {
-        safe_logger (spdlog::level::err, "invalid preset");
+        LOG_F(ERROR, "invalid preset");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     if (dbs.find (preset) == dbs.end ())
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "stream is not started or no preset: {} found for this board", preset_str.c_str ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
@@ -422,7 +446,7 @@ int Board::get_board_data_count (int preset, int *result)
 {
     if (dbs.find (preset) == dbs.end ())
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "stream is not startted or no preset: {} found for this board", preset);
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
@@ -444,12 +468,12 @@ int Board::get_board_data (int data_count, int preset, double *data_buf)
     std::string preset_str = preset_to_string (preset);
     if (board_descr.find (preset_str) == board_descr.end ())
     {
-        safe_logger (spdlog::level::err, "invalid preset");
+        LOG_F(ERROR, "invalid preset");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     if (dbs.find (preset) == dbs.end ())
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "stream is not startted or no preset: {} found for this board", preset);
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }

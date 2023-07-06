@@ -23,7 +23,7 @@ int DynLibBoard::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if (params.timeout <= 0)
@@ -34,12 +34,12 @@ int DynLibBoard::prepare_session ()
     dll_loader = new DLLLoader (get_lib_name ().c_str ());
     if (!dll_loader->load_library ())
     {
-        safe_logger (spdlog::level::err, "Failed to load library");
+        LOG_F(ERROR, "Failed to load library");
         delete dll_loader;
         dll_loader = NULL;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
-    safe_logger (spdlog::level::debug, "Library is loaded");
+    LOG_F(1, "Library is loaded");
     int res = call_init ();
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
@@ -62,12 +62,12 @@ int DynLibBoard::start_stream (int buffer_size, const char *streamer_params)
 {
     if (is_streaming)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     if (buffer_size <= 0 || buffer_size > MAX_CAPTURE_SAMPLES)
     {
-        safe_logger (spdlog::level::err, "invalid array size");
+        LOG_F(ERROR, "invalid array size");
         return (int)BrainFlowExitCodes::INVALID_BUFFER_SIZE_ERROR;
     }
 
@@ -97,8 +97,7 @@ int DynLibBoard::start_stream (int buffer_size, const char *streamer_params)
     }
     else
     {
-        safe_logger (
-            spdlog::level::err, "no data received in {} sec, stopping thread", params.timeout);
+        LOG_F(ERROR, "no data received in {} sec, stopping thread", params.timeout);
         is_streaming = true;
         stop_stream ();
         return (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR;
@@ -153,7 +152,7 @@ void DynLibBoard::read_thread ()
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("get_data");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for get_data");
+        LOG_F(ERROR, "failed to get function address for get_data");
         state = (int)BrainFlowExitCodes::GENERAL_ERROR;
         return;
     }
@@ -162,7 +161,7 @@ void DynLibBoard::read_thread ()
     double *data = new double[num_rows];
     if (data == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to allocate data");
+        LOG_F(ERROR, "failed to allocate data");
         state = (int)BrainFlowExitCodes::GENERAL_ERROR;
         return;
     }
@@ -193,7 +192,7 @@ void DynLibBoard::read_thread ()
             }
             if (num_attempts == max_attempts)
             {
-                safe_logger (spdlog::level::err, "no data received");
+                LOG_F(ERROR, "no data received");
                 {
                     std::lock_guard<std::mutex> lk (m);
                     state = (int)BrainFlowExitCodes::GENERAL_ERROR;
@@ -225,7 +224,7 @@ int DynLibBoard::call_init ()
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("initialize");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for initialize");
+        LOG_F(ERROR, "failed to get function address for initialize");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -234,7 +233,7 @@ int DynLibBoard::call_init ()
     int res = func ((void *)&info);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to initialize {}", res);
+        LOG_F(ERROR, "failed to initialize {}", res);
     }
     return res;
 }
@@ -248,7 +247,7 @@ int DynLibBoard::call_open ()
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("open_device");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for open_device");
+        LOG_F(ERROR, "failed to get function address for open_device");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return func (NULL);
@@ -263,7 +262,7 @@ int DynLibBoard::call_start ()
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("start_stream");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for start_stream");
+        LOG_F(ERROR, "failed to get function address for start_stream");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return func (NULL);
@@ -278,7 +277,7 @@ int DynLibBoard::call_stop ()
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("stop_stream");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for stop_stream");
+        LOG_F(ERROR, "failed to get function address for stop_stream");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return func (NULL);
@@ -293,7 +292,7 @@ int DynLibBoard::call_close ()
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("close_device");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for close_device");
+        LOG_F(ERROR, "failed to get function address for close_device");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return func (NULL);
@@ -308,7 +307,7 @@ int DynLibBoard::call_release ()
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("release");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for release");
+        LOG_F(ERROR, "failed to get function address for release");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return func (NULL);
@@ -323,7 +322,7 @@ int DynLibBoard::call_config (char *config)
     int (*func) (void *) = (int (*) (void *))dll_loader->get_address ("config_device");
     if (func == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for release");
+        LOG_F(ERROR, "failed to get function address for release");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return func ((void *)config);

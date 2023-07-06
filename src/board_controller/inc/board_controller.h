@@ -3,6 +3,17 @@
 #include "board_info_getter.h" // include it here for matlab
 #include "shared_export.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+#include <fmt/core.h>
+#include <fmt/format.h>
+#define LOGURU_USE_FMTLIB 1
+#include "loguru.hpp"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -36,9 +47,10 @@ extern "C"
 
     // logging methods
     SHARED_EXPORT int CALLING_CONVENTION set_log_level_board_controller (int log_level);
-    SHARED_EXPORT int CALLING_CONVENTION set_log_file_board_controller (const char *log_file);
-    SHARED_EXPORT int CALLING_CONVENTION log_message_board_controller (
-        int log_level, char *message);
+    SHARED_EXPORT int CALLING_CONVENTION add_log_file_board_controller (const char *log_file, loguru::FileMode mode, loguru::Verbosity verbosity);
+    SHARED_EXPORT int CALLING_CONVENTION log_message_board_controller (int log_level, char *message);
+    SHARED_EXPORT int CALLING_CONVENTION add_callback_board_controller (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity);
+
 
     // platform types and methods
     typedef const struct JNINativeInterface *JNIEnv; // A handle to use Java's JNI

@@ -64,12 +64,12 @@ int Explore::config_board (std::string config, std::string &response)
         }
         catch (...)
         {
-            safe_logger (spdlog::level::err, "format is '{}value'", sps_prefix.c_str ());
+            LOG_F(ERROR, "format is '{}value'", sps_prefix.c_str ());
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
         if ((new_sampling_rate != 250) && (new_sampling_rate != 500) && (new_sampling_rate != 1000))
         {
-            safe_logger (spdlog::level::err,
+            LOG_F(ERROR,
                 "invalid sampling rate provided, possible values are 250, 500, 1000");
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
@@ -93,12 +93,12 @@ int Explore::config_board (std::string config, std::string &response)
         }
         catch (...)
         {
-            safe_logger (spdlog::level::err, "format is '{}value'", test_sig_prefix.c_str ());
+            LOG_F(ERROR, "format is '{}value'", test_sig_prefix.c_str ());
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
         if ((mask < 0) || (mask > 255))
         {
-            safe_logger (spdlog::level::err, "invalid mask provided, should be between 1 and 255");
+            LOG_F(ERROR, "invalid mask provided, should be between 1 and 255");
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
         command[8] = 0xAA; // op code
@@ -119,12 +119,12 @@ int Explore::config_board (std::string config, std::string &response)
         }
         catch (...)
         {
-            safe_logger (spdlog::level::err, "format is '{}value'", chan_prefix.c_str ());
+            LOG_F(ERROR, "format is '{}value'", chan_prefix.c_str ());
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
         if ((mask < 0) || (mask > 255))
         {
-            safe_logger (spdlog::level::err, "invalid mask provided, should be between 1 and 255");
+            LOG_F(ERROR, "invalid mask provided, should be between 1 and 255");
             return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
         }
         command[8] = 0xA2; // op code
@@ -134,7 +134,7 @@ int Explore::config_board (std::string config, std::string &response)
 
     if (!prefix_found)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "invalid config format, supported formats are sampling_rate:value and "
             "test_signal:value");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
@@ -143,12 +143,12 @@ int Explore::config_board (std::string config, std::string &response)
     std::string command_str = "";
     for (int i = 0; i < command_len; i++)
         command_str += std::to_string (command[i]) + " ";
-    safe_logger (spdlog::level::info, "sending command {} to device", command_str.c_str ());
+    LOG_F(INFO, "sending command {} to device", command_str.c_str ());
 
     int res = bluetooth_write_data ((char *)command, command_len);
     if (res != command_len)
     {
-        safe_logger (spdlog::level::err, "failed to config device, res: {}", res);
+        LOG_F(ERROR, "failed to config device, res: {}", res);
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -158,12 +158,12 @@ int Explore::start_stream (int buffer_size, const char *streamer_params)
 {
     if (!initialized)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before start_stream");
+        LOG_F(ERROR, "You need to call prepare_session before start_stream");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
 
@@ -192,7 +192,7 @@ int Explore::start_stream (int buffer_size, const char *streamer_params)
     }
     else
     {
-        safe_logger (spdlog::level::err, "no data received in {} sec, stopping thread", num_secs);
+        LOG_F(ERROR, "no data received in {} sec, stopping thread", num_secs);
         stop_stream ();
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
@@ -247,7 +247,7 @@ void Explore::read_thread ()
         int res = bluetooth_get_data ((char *)&header, sizeof (header));
         if (res < 0)
         {
-            safe_logger (spdlog::level::err, "error reading data from bluetooth");
+            LOG_F(ERROR, "error reading data from bluetooth");
         }
         if (res != 8)
         {
@@ -261,16 +261,16 @@ void Explore::read_thread ()
                 state = (int)BrainFlowExitCodes::STATUS_OK;
             }
             cv.notify_one ();
-            safe_logger (spdlog::level::debug, "received first package");
+            LOG_F(1, "received first package");
         }
         res = 0;
-        // safe_logger (spdlog::level::trace, "header pid counter size timestamp: {} {} {} {}",
+        // LOG_F(2, "header pid counter size timestamp: {} {} {} {}",
         //     header.pid, header.counter, header.payload_size, header.timestamp);
 
         header.payload_size -= 4; // its because of timestamp which moved to header from the package
         if (header.payload_size < 1)
         {
-            safe_logger (spdlog::level::err, "negative size for payload");
+            LOG_F(ERROR, "negative size for payload");
             continue;
         }
 
@@ -310,7 +310,7 @@ void Explore::read_thread ()
                 parse_env_data (&header, package_anc, payload_buffer);
                 break;
             default:
-                safe_logger (spdlog::level::trace, "received header: {}", header.pid);
+                LOG_F(2, "received header: {}", header.pid);
                 break;
         }
     }
@@ -331,7 +331,7 @@ void Explore::parse_orientation_data (
     if ((payload[payload_size - 4] != 0xAF) || (payload[payload_size - 3] != 0xBE) ||
         (payload[payload_size - 2] != 0xAD) || (payload[payload_size - 1] != 0xDE))
     {
-        safe_logger (spdlog::level::warn, "checksum failed, {} {} {} {}", payload[payload_size - 4],
+        LOG_F(WARNING, "checksum failed, {} {} {} {}", payload[payload_size - 4],
             payload[payload_size - 3], payload[payload_size - 2], payload[payload_size - 1]);
         return;
     }
@@ -343,7 +343,7 @@ void Explore::parse_orientation_data (
 
     if (payload_size % 2 != 0) // 2 is int16
     {
-        safe_logger (spdlog::level::warn, "Invalid payload size for Orn package: {}");
+        LOG_F(WARNING, "Invalid payload size for Orn package: {}");
         return;
     }
     int num_datapoints = payload_size / 2;
@@ -380,7 +380,7 @@ void Explore::parse_eeg_data (const ExploreHeader *header, double *package, unsi
     if ((payload[payload_size - 4] != 0xAF) || (payload[payload_size - 3] != 0xBE) ||
         (payload[payload_size - 2] != 0xAD) || (payload[payload_size - 1] != 0xDE))
     {
-        safe_logger (spdlog::level::warn, "checksum failed, {} {} {} {}", payload[payload_size - 4],
+        LOG_F(WARNING, "checksum failed, {} {} {} {}", payload[payload_size - 4],
             payload[payload_size - 3], payload[payload_size - 2], payload[payload_size - 1]);
         return;
     }
@@ -389,13 +389,13 @@ void Explore::parse_eeg_data (const ExploreHeader *header, double *package, unsi
     std::vector<int> eeg_channels = board_descr["default"]["eeg_channels"];
     if ((payload_size % n_packages != 0) || (payload_size % 3 != 0)) // 3 is int24 format
     {
-        safe_logger (spdlog::level::warn,
+        LOG_F(WARNING,
             "Invalid payload size for EEG package: {}, n_packages: {}", payload_size, n_packages);
         return;
     }
     if (payload_size % (eeg_channels.size () + 1) != 0) // 1 for data status, maybe its reference
     {
-        safe_logger (spdlog::level::warn, "Invalid payload size for num_eeg_channels: {}, {}",
+        LOG_F(WARNING, "Invalid payload size for num_eeg_channels: {}, {}",
             payload_size, eeg_channels.size ());
         return;
     }
@@ -444,14 +444,14 @@ void Explore::parse_env_data (const ExploreHeader *header, double *package, unsi
     if ((payload[payload_size - 4] != 0xAF) || (payload[payload_size - 3] != 0xBE) ||
         (payload[payload_size - 2] != 0xAD) || (payload[payload_size - 1] != 0xDE))
     {
-        safe_logger (spdlog::level::warn, "checksum failed, {} {} {} {}", payload[payload_size - 4],
+        LOG_F(WARNING, "checksum failed, {} {} {} {}", payload[payload_size - 4],
             payload[payload_size - 3], payload[payload_size - 2], payload[payload_size - 1]);
         return;
     }
     payload_size = payload_size - 4;
     if (payload_size < 5)
     {
-        safe_logger (spdlog::level::warn, "invalid size for env package: {}", payload_size);
+        LOG_F(WARNING, "invalid size for env package: {}", payload_size);
         return;
     }
     int temperature_channel = board_descr["ancillary"]["temperature_channels"][0];

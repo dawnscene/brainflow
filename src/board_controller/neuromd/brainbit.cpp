@@ -64,7 +64,7 @@ int BrainBit::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     // init all function pointers
@@ -97,7 +97,7 @@ int BrainBit::prepare_session ()
     {
         char error_msg[1024];
         sdk_last_error_msg (error_msg, 1024);
-        safe_logger (spdlog::level::err, "get channels error {}", error_msg);
+        LOG_F(ERROR, "get channels error {}", error_msg);
         free_device ();
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
@@ -203,7 +203,7 @@ int BrainBit::prepare_session ()
     {
         char error_msg[1024];
         sdk_last_error_msg (error_msg, 1024);
-        safe_logger (spdlog::level::err, "get channels error {}", error_msg);
+        LOG_F(ERROR, "get channels error {}", error_msg);
         free_listeners ();
         free_channels ();
         free_device ();
@@ -258,7 +258,7 @@ int BrainBit::config_board (std::string config, std::string &response)
 
     if (!parsed)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "Invalid value for config, Supported values: CommandStartSignal, CommandStopSignal, "
             "CommandStartResist, CommandStopResist");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
@@ -269,7 +269,7 @@ int BrainBit::config_board (std::string config, std::string &response)
     {
         char error_msg[1024];
         sdk_last_error_msg (error_msg, 1024);
-        safe_logger (spdlog::level::err, error_msg);
+        LOG_F(ERROR, error_msg);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -280,7 +280,7 @@ int BrainBit::start_stream (int buffer_size, const char *streamer_params)
 {
     if (is_streaming)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     int res = prepare_for_acquisition (buffer_size, streamer_params);
@@ -520,31 +520,31 @@ BrainBit::~BrainBit ()
 
 int BrainBit::prepare_session ()
 {
-    safe_logger (spdlog::level::err, "BrainBit doesnt support Linux.");
+    LOG_F(ERROR, "BrainBit doesnt support Linux.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int BrainBit::config_board (std::string config, std::string &response)
 {
-    safe_logger (spdlog::level::err, "BrainBit doesnt support Linux.");
+    LOG_F(ERROR, "BrainBit doesnt support Linux.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int BrainBit::release_session ()
 {
-    safe_logger (spdlog::level::err, "BrainBit doesnt support Linux.");
+    LOG_F(ERROR, "BrainBit doesnt support Linux.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int BrainBit::stop_stream ()
 {
-    safe_logger (spdlog::level::err, "BrainBit doesnt support Linux.");
+    LOG_F(ERROR, "BrainBit doesnt support Linux.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int BrainBit::start_stream (int buffer_size, const char *streamer_params)
 {
-    safe_logger (spdlog::level::err, "BrainBit doesnt support Linux.");
+    LOG_F(ERROR, "BrainBit doesnt support Linux.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 

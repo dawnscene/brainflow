@@ -43,7 +43,7 @@ UnicornBoard::UnicornBoard (struct BrainFlowInputParams params)
         unicornlib_path = lib_name;
     }
 
-    safe_logger (spdlog::level::debug, "use dyn lib: {}", unicornlib_path.c_str ());
+    LOG_F(1, "use dyn lib: {}", unicornlib_path.c_str ());
     dll_loader = new DLLLoader (unicornlib_path.c_str ());
 
     is_streaming = false;
@@ -62,22 +62,22 @@ int UnicornBoard::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
 
     if (!dll_loader->load_library ())
     {
-        safe_logger (spdlog::level::err, "Failed to load library");
+        LOG_F(ERROR, "Failed to load library");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
-    safe_logger (spdlog::level::debug, "Library is loaded");
+    LOG_F(1, "Library is loaded");
 
     func_get_data = (int (*) (UNICORN_HANDLE, uint32_t, float *, uint32_t))dll_loader->get_address (
         "UNICORN_GetData");
     if (func_get_data == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for UNICORN_GetData");
+        LOG_F(ERROR, "failed to get function address for UNICORN_GetData");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
@@ -95,7 +95,7 @@ int UnicornBoard::start_stream (int buffer_size, const char *streamer_params)
 {
     if (is_streaming)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
 
@@ -212,7 +212,7 @@ void UnicornBoard::read_thread ()
 #else
             usleep (10000);
 #endif
-            safe_logger (spdlog::level::trace, "UNICORN_GetData error: {}", res);
+            LOG_F(2, "UNICORN_GetData error: {}", res);
             continue;
         }
     }
@@ -223,7 +223,7 @@ int UnicornBoard::config_board (std::string config, std::string &response)
 {
     // todo if there will be requests for it.
     // Unicorn API provides int Unicorn_SetConfiguration method
-    safe_logger (spdlog::level::debug, "config_board is not supported for Unicorn.");
+    LOG_F(1, "config_board is not supported for Unicorn.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
@@ -235,27 +235,26 @@ int UnicornBoard::call_open ()
             "UNICORN_GetAvailableDevices");
     if (func_get_available == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for UNICORN_GetAvailableDevices");
+        LOG_F(ERROR, "failed to get function address for UNICORN_GetAvailableDevices");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     unsigned int available_device_count = 0;
     int ec = func_get_available (NULL, &available_device_count, TRUE);
     if (ec != UNICORN_ERROR_SUCCESS)
     {
-        safe_logger (spdlog::level::err, "Error in UNICORN_GetAvailableDevices {}", ec);
+        LOG_F(ERROR, "Error in UNICORN_GetAvailableDevices {}", ec);
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
     if (available_device_count < 1)
     {
-        safe_logger (spdlog::level::err, "Unicorn not found");
+        LOG_F(ERROR, "Unicorn not found");
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
     UNICORN_DEVICE_SERIAL *available_devices = new UNICORN_DEVICE_SERIAL[available_device_count];
     ec = func_get_available (available_devices, &available_device_count, TRUE);
     if (ec != UNICORN_ERROR_SUCCESS)
     {
-        safe_logger (spdlog::level::err, "Error in UNICORN_GetAvailableDevices {}", ec);
+        LOG_F(ERROR, "Error in UNICORN_GetAvailableDevices {}", ec);
         delete[] available_devices;
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
@@ -264,7 +263,7 @@ int UnicornBoard::call_open ()
     unsigned int device_num = 0;
     if (params.serial_number.empty ())
     {
-        safe_logger (spdlog::level::warn,
+        LOG_F(WARNING,
             "Use device with id {}. To select another one provide id to serial_number field.",
             available_devices[device_num]);
     }
@@ -279,8 +278,7 @@ int UnicornBoard::call_open ()
         }
         if (device_num == available_device_count)
         {
-            safe_logger (
-                spdlog::level::err, "device with id {} not found", params.serial_number.c_str ());
+            LOG_F(ERROR, "device with id {} not found", params.serial_number.c_str ());
             delete[] available_devices;
             return (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
@@ -291,14 +289,14 @@ int UnicornBoard::call_open ()
         UNICORN_DEVICE_SERIAL, UNICORN_HANDLE *))dll_loader->get_address ("UNICORN_OpenDevice");
     if (func_open == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for UNICORN_OpenDevice");
+        LOG_F(ERROR, "failed to get function address for UNICORN_OpenDevice");
         delete[] available_devices;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     ec = func_open (available_devices[device_num], &device_handle);
     if ((ec != UNICORN_ERROR_SUCCESS) || (device_handle == 0))
     {
-        safe_logger (spdlog::level::err, "Error in UNICORN_OpenDevice {}", ec);
+        LOG_F(ERROR, "Error in UNICORN_OpenDevice {}", ec);
         delete[] available_devices;
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
     }
@@ -313,14 +311,13 @@ int UnicornBoard::call_start ()
         (int (*) (UNICORN_HANDLE, BOOL))dll_loader->get_address ("UNICORN_StartAcquisition");
     if (func_start_streaming == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for UNICORN_StartAcquisition");
+        LOG_F(ERROR, "failed to get function address for UNICORN_StartAcquisition");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     int ec = func_start_streaming (device_handle, FALSE);
     if (ec != UNICORN_ERROR_SUCCESS)
     {
-        safe_logger (spdlog::level::err, "Error in UNICORN_StartAcquisition {}", ec);
+        LOG_F(ERROR, "Error in UNICORN_StartAcquisition {}", ec);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -332,14 +329,13 @@ int UnicornBoard::call_stop ()
         (int (*) (UNICORN_HANDLE))dll_loader->get_address ("UNICORN_StopAcquisition");
     if (func_stop_streaming == NULL)
     {
-        safe_logger (
-            spdlog::level::err, "failed to get function address for UNICORN_StopAcquisition");
+        LOG_F(ERROR, "failed to get function address for UNICORN_StopAcquisition");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     int ec = func_stop_streaming (device_handle);
     if (ec != UNICORN_ERROR_SUCCESS)
     {
-        safe_logger (spdlog::level::err, "Error in UNICORN_StopAcquisition {}", ec);
+        LOG_F(ERROR, "Error in UNICORN_StopAcquisition {}", ec);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -351,13 +347,13 @@ int UnicornBoard::call_close ()
         (int (*) (UNICORN_HANDLE *))dll_loader->get_address ("UNICORN_CloseDevice");
     if (func_close == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for UNICORN_CloseDevice");
+        LOG_F(ERROR, "failed to get function address for UNICORN_CloseDevice");
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     int ec = func_close (&device_handle);
     if (ec != UNICORN_ERROR_SUCCESS)
     {
-        safe_logger (spdlog::level::err, "Error in UNICORN_CloseDevice {}", ec);
+        LOG_F(ERROR, "Error in UNICORN_CloseDevice {}", ec);
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     return (int)BrainFlowExitCodes::STATUS_OK;
@@ -377,31 +373,31 @@ UnicornBoard::~UnicornBoard ()
 
 int UnicornBoard::prepare_session ()
 {
-    safe_logger (spdlog::level::err, "UnicornBoard doesnt support MacOS.");
+    LOG_F(ERROR, "UnicornBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int UnicornBoard::config_board (std::string config, std::string &response)
 {
-    safe_logger (spdlog::level::err, "UnicornBoard doesnt support MacOS.");
+    LOG_F(ERROR, "UnicornBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int UnicornBoard::release_session ()
 {
-    safe_logger (spdlog::level::err, "UnicornBoard doesnt support MacOS.");
+    LOG_F(ERROR, "UnicornBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int UnicornBoard::stop_stream ()
 {
-    safe_logger (spdlog::level::err, "UnicornBoard doesnt support MacOS.");
+    LOG_F(ERROR, "UnicornBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 
 int UnicornBoard::start_stream (int buffer_size, const char *streamer_params)
 {
-    safe_logger (spdlog::level::err, "UnicornBoard doesnt support MacOS.");
+    LOG_F(ERROR, "UnicornBoard doesnt support MacOS.");
     return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
 }
 #endif

@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <string>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #include "board.h"
 #include "board_controller.h"

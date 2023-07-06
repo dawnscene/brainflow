@@ -30,7 +30,7 @@ int CytonWifi::config_board (std::string conf, std::string &response)
 {
     if (gain_tracker.apply_config (conf) == (int)OpenBCICommandTypes::INVALID_COMMAND)
     {
-        safe_logger (spdlog::level::warn, "invalid command: {}", conf.c_str ());
+        LOG_F(WARNING, "invalid command: {}", conf.c_str ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     int res = OpenBCIWifiShieldBoard::config_board (conf, response);
@@ -78,9 +78,9 @@ void CytonWifi::read_thread ()
             if (res < 0)
             {
 #ifdef _WIN32
-                safe_logger (spdlog::level::warn, "WSAGetLastError is {}", WSAGetLastError ());
+                LOG_F(WARNING, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-                safe_logger (spdlog::level::warn, "errno {} message {}", errno, strerror (errno));
+                LOG_F(WARNING, "errno {} message {}", errno, strerror (errno));
 #endif
             }
 
@@ -96,7 +96,7 @@ void CytonWifi::read_thread ()
 
         if ((bytes[31] < END_BYTE_STANDARD) || (bytes[31] > END_BYTE_MAX))
         {
-            safe_logger (spdlog::level::warn, "Wrong end byte {}", bytes[31]);
+            LOG_F(WARNING, "Wrong end byte {}", bytes[31]);
             continue;
         }
 

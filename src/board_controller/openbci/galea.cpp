@@ -43,7 +43,7 @@ int Galea::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if ((params.timeout > 600) || (params.timeout < 1))
@@ -63,13 +63,13 @@ int Galea::prepare_session ()
     int res = socket->connect ();
     if (res != (int)SocketClientUDPReturnCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to init socket: {}", res);
+        LOG_F(ERROR, "failed to init socket: {}", res);
         delete socket;
         socket = NULL;
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
 
-    safe_logger (spdlog::level::trace, "timeout for socket is {}", socket_timeout);
+    LOG_F(2, "timeout for socket is {}", socket_timeout);
     socket->set_timeout (socket_timeout);
     // force default settings for device
     std::string tmp;
@@ -77,7 +77,7 @@ int Galea::prepare_session ()
     res = config_board (default_settings, tmp);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to apply default settings");
+        LOG_F(ERROR, "failed to apply default settings");
         delete socket;
         socket = NULL;
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
@@ -87,7 +87,7 @@ int Galea::prepare_session ()
     res = config_board (sampl_rate, tmp);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        safe_logger (spdlog::level::err, "failed to apply defaul sampling rate");
+        LOG_F(ERROR, "failed to apply defaul sampling rate");
         delete socket;
         socket = NULL;
         return (int)BrainFlowExitCodes::BOARD_NOT_READY_ERROR;
@@ -100,7 +100,7 @@ int Galea::config_board (std::string conf, std::string &response)
 {
     if (socket == NULL)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        LOG_F(ERROR, "You need to call prepare_session before config_board");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     // special handling for some commands
@@ -108,7 +108,7 @@ int Galea::config_board (std::string conf, std::string &response)
     {
         if (is_streaming)
         {
-            safe_logger (spdlog::level::err, "can not calc delay during the streaming.");
+            LOG_F(ERROR, "can not calc delay during the streaming.");
             return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
         }
         int res = calc_time (response);
@@ -117,12 +117,12 @@ int Galea::config_board (std::string conf, std::string &response)
 
     if (gain_tracker.apply_config (conf) == (int)OpenBCICommandTypes::INVALID_COMMAND)
     {
-        safe_logger (spdlog::level::warn, "invalid command: {}", conf.c_str ());
+        LOG_F(WARNING, "invalid command: {}", conf.c_str ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
     const char *config = conf.c_str ();
-    safe_logger (spdlog::level::debug, "Trying to config Galea with {}", config);
+    LOG_F(1, "Trying to config Galea with {}", config);
     int len = (int)strlen (config);
     int res = socket->send (config, len);
     if (len != res)
@@ -131,12 +131,12 @@ int Galea::config_board (std::string conf, std::string &response)
         if (res == -1)
         {
 #ifdef _WIN32
-            safe_logger (spdlog::level::err, "WSAGetLastError is {}", WSAGetLastError ());
+            LOG_F(ERROR, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-            safe_logger (spdlog::level::err, "errno {} message {}", errno, strerror (errno));
+            LOG_F(ERROR, "errno {} message {}", errno, strerror (errno));
 #endif
         }
-        safe_logger (spdlog::level::err, "Failed to config a board");
+        LOG_F(ERROR, "Failed to config a board");
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
 
@@ -152,10 +152,10 @@ int Galea::config_board (std::string conf, std::string &response)
             if (res == -1)
             {
 #ifdef _WIN32
-                safe_logger (spdlog::level::err, "config_board recv ack WSAGetLastError is {}",
+                LOG_F(ERROR, "config_board recv ack WSAGetLastError is {}",
                     WSAGetLastError ());
 #else
-                safe_logger (spdlog::level::err, "config_board recv ack errno {} message {}", errno,
+                LOG_F(ERROR, "config_board recv ack errno {} message {}", errno,
                     strerror (errno));
 #endif
                 return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
@@ -163,7 +163,7 @@ int Galea::config_board (std::string conf, std::string &response)
             current_attempt++;
             if (current_attempt == max_attempt)
             {
-                safe_logger (spdlog::level::err, "Device is streaming data while it should not!");
+                LOG_F(ERROR, "Device is streaming data while it should not!");
                 return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
             }
         }
@@ -177,16 +177,16 @@ int Galea::config_board (std::string conf, std::string &response)
             case 'A':
                 return (int)BrainFlowExitCodes::STATUS_OK;
             case 'I':
-                safe_logger (spdlog::level::err, "invalid command");
+                LOG_F(ERROR, "invalid command");
                 return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
             default:
-                safe_logger (spdlog::level::warn, "unknown char received: {}", b[0]);
+                LOG_F(WARNING, "unknown char received: {}", b[0]);
                 return (int)BrainFlowExitCodes::STATUS_OK;
         }
     }
     else
     {
-        safe_logger (spdlog::level::warn,
+        LOG_F(WARNING,
             "reconfiguring device during the streaming may lead to inconsistent data, it's "
             "recommended to call stop_stream before config_board");
     }
@@ -198,12 +198,12 @@ int Galea::start_stream (int buffer_size, const char *streamer_params)
 {
     if (!initialized)
     {
-        safe_logger (spdlog::level::err, "You need to call prepare_session before config_board");
+        LOG_F(ERROR, "You need to call prepare_session before config_board");
         return (int)BrainFlowExitCodes::BOARD_NOT_CREATED_ERROR;
     }
     if (is_streaming)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
 
@@ -231,12 +231,12 @@ int Galea::start_stream (int buffer_size, const char *streamer_params)
         if (res == -1)
         {
 #ifdef _WIN32
-            safe_logger (spdlog::level::err, "WSAGetLastError is {}", WSAGetLastError ());
+            LOG_F(ERROR, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-            safe_logger (spdlog::level::err, "errno {} message {}", errno, strerror (errno));
+            LOG_F(ERROR, "errno {} message {}", errno, strerror (errno));
 #endif
         }
-        safe_logger (spdlog::level::err, "Failed to send a command to board");
+        LOG_F(ERROR, "Failed to send a command to board");
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
 
@@ -253,7 +253,7 @@ int Galea::start_stream (int buffer_size, const char *streamer_params)
     }
     else
     {
-        safe_logger (spdlog::level::err, "no data received in 5sec, stopping thread");
+        LOG_F(ERROR, "no data received in 5sec, stopping thread");
         this->is_streaming = true;
         this->stop_stream ();
         return (int)BrainFlowExitCodes::SYNC_TIMEOUT_ERROR;
@@ -274,12 +274,12 @@ int Galea::stop_stream ()
             if (res == -1)
             {
 #ifdef _WIN32
-                safe_logger (spdlog::level::err, "WSAGetLastError is {}", WSAGetLastError ());
+                LOG_F(ERROR, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-                safe_logger (spdlog::level::err, "errno {} message {}", errno, strerror (errno));
+                LOG_F(ERROR, "errno {} message {}", errno, strerror (errno));
 #endif
             }
-            safe_logger (spdlog::level::err, "Failed to send a command to board");
+            LOG_F(ERROR, "Failed to send a command to board");
             return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
         }
 
@@ -294,8 +294,7 @@ int Galea::stop_stream ()
             current_attempt++;
             if (current_attempt == max_attempt)
             {
-                safe_logger (
-                    spdlog::level::err, "Command 's' was sent but streaming is still running.");
+                LOG_F(ERROR, "Command 's' was sent but streaming is still running.");
                 return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
             }
         }
@@ -367,9 +366,9 @@ void Galea::read_thread ()
         if (res == -1)
         {
 #ifdef _WIN32
-            safe_logger (spdlog::level::err, "WSAGetLastError is {}", WSAGetLastError ());
+            LOG_F(ERROR, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-            safe_logger (spdlog::level::err, "errno {} message {}", errno, strerror (errno));
+            LOG_F(ERROR, "errno {} message {}", errno, strerror (errno));
 #endif
             continue;
         }
@@ -379,7 +378,7 @@ void Galea::read_thread ()
             {
                 // more likely its a string received, try to print it
                 b[res] = '\0';
-                safe_logger (spdlog::level::warn, "Received: {}", b);
+                LOG_F(WARNING, "Received: {}", (const char *)b);
             }
             continue;
         }
@@ -406,14 +405,14 @@ void Galea::read_thread ()
             // inform main thread that everything is ok and first package was received
             if (this->state != (int)BrainFlowExitCodes::STATUS_OK)
             {
-                safe_logger (spdlog::level::info,
+                LOG_F(INFO,
                     "received first package with {} bytes streaming is started", res);
                 {
                     std::lock_guard<std::mutex> lk (this->m);
                     this->state = (int)BrainFlowExitCodes::STATUS_OK;
                 }
                 this->cv.notify_one ();
-                safe_logger (spdlog::level::debug, "start streaming");
+                LOG_F(1, "start streaming");
             }
 
             for (int cur_package = 0; cur_package < num_packages; cur_package++)
@@ -492,15 +491,14 @@ int Galea::calc_time (std::string &resp)
     int res = socket->send ("F4444444", bytes_to_calc_rtt);
     if (res != bytes_to_calc_rtt)
     {
-        safe_logger (spdlog::level::warn, "failed to send time calc command to device");
+        LOG_F(WARNING, "failed to send time calc command to device");
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
     res = socket->recv (b, bytes_to_calc_rtt);
     double done = get_timestamp ();
     if (res != bytes_to_calc_rtt)
     {
-        safe_logger (
-            spdlog::level::warn, "failed to recv resp from time calc command, resp size {}", res);
+        LOG_F(WARNING, "failed to recv resp from time calc command, resp size {}", res);
         return (int)BrainFlowExitCodes::BOARD_WRITE_ERROR;
     }
 
@@ -517,7 +515,7 @@ int Galea::calc_time (std::string &resp)
     result["pc_timestamp"] = start + half_rtt;
 
     resp = result.dump ();
-    safe_logger (spdlog::level::info, "calc_time output: {}", resp);
+    LOG_F(INFO, "calc_time output: {}", resp);
 
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
@@ -530,8 +528,8 @@ std::string Galea::find_device ()
     std::string ssdp_ip_address = "239.255.255.250";
 #endif
 
-    safe_logger (spdlog::level::trace, "trying to autodiscover device via SSDP");
-    safe_logger (spdlog::level::trace, "timeout for search is {}", params.timeout);
+    LOG_F(2, "trying to autodiscover device via SSDP");
+    LOG_F(2, "timeout for search is {}", params.timeout);
     std::string ip_address = "";
     SocketClientUDP udp_client (ssdp_ip_address.c_str (),
         1900); // ssdp ip and port
@@ -546,7 +544,7 @@ std::string Galea::find_device ()
             "\r\n"
             "\r\n");
 
-        safe_logger (spdlog::level::trace, "Use search request {}", msearch.c_str ());
+        LOG_F(2, "Use search request {}", msearch.c_str ());
 
         res = (int)udp_client.send (msearch.c_str (), (int)msearch.size ());
         if (res == msearch.size ())
@@ -560,7 +558,7 @@ std::string Galea::find_device ()
                 if (res > 1)
                 {
                     std::string response ((const char *)b);
-                    safe_logger (spdlog::level::trace, "Search response: {}", b);
+                    LOG_F(2, "Search response: {}", (const char *)b);
                     std::regex rgx_ip ("LOCATION: http://([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)");
                     std::smatch matches;
                     if (std::regex_search (response, matches, rgx_ip) == true)
@@ -586,21 +584,21 @@ std::string Galea::find_device ()
         }
         else
         {
-            safe_logger (spdlog::level::err, "Sent res {}", res);
+            LOG_F(ERROR, "Sent res {}", res);
         }
     }
     else
     {
-        safe_logger (spdlog::level::err, "Failed to connect socket {}", res);
+        LOG_F(ERROR, "Failed to connect socket {}", res);
     }
 
     if (ip_address.empty ())
     {
-        safe_logger (spdlog::level::err, "failed to find ip address");
+        LOG_F(ERROR, "failed to find ip address");
     }
     else
     {
-        safe_logger (spdlog::level::info, "use ip address {}", ip_address.c_str ());
+        LOG_F(INFO, "use ip address {}", ip_address.c_str ());
     }
 
     udp_client.close ();

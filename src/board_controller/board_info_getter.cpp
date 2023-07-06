@@ -40,12 +40,12 @@ int get_board_presets (int board_id, int *presets, int *len)
             }
             else
             {
-                Board::board_logger->warn ("unknown preset found in json: {}", el.key ());
+                LOG_F(WARNING, "unknown preset found in json: {}", el.key ());
             }
         }
         if (counter == 0)
         {
-            Board::board_logger->error ("no presets found"); // more likely will never be executed
+            LOG_F(ERROR, "no presets found"); // more likely will never be executed
             return (int)BrainFlowExitCodes::GENERAL_ERROR;
         }
         else
@@ -56,8 +56,7 @@ int get_board_presets (int board_id, int *presets, int *len)
     }
     catch (json::exception &e)
     {
-        Board::board_logger->error (
-            "Failed to get board info: {}, usually it means that you provided wrong board id",
+        LOG_F(ERROR, "Failed to get board info: {}, usually it means that you provided wrong board id",
             e.what ());
         return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
     }
@@ -84,8 +83,7 @@ int get_board_descr (int board_id, int preset, char *board_descr, int *len)
     }
     catch (json::exception &e)
     {
-        Board::board_logger->error (
-            "Failed to get board info: {}, usually it means that you provided wrong board id",
+        LOG_F(ERROR, "Failed to get board info: {}, usually it means that you provided wrong board id",
             e.what ());
         return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
     }
@@ -247,8 +245,7 @@ static int get_single_value (
     {
         if (use_logger)
         {
-            Board::board_logger->error (
-                "Failed to get board info: {}, usually it means that device has no such channels, "
+            LOG_F(ERROR, "Failed to get board info: {}, usually it means that device has no such channels, "
                 "use get_board_descr method for the info about supported channels",
                 e.what ());
         }
@@ -280,8 +277,7 @@ static int get_array_value (
     {
         if (use_logger)
         {
-            Board::board_logger->error (
-                "Failed to get board info: {}, usually it means that device has no such channels, "
+            LOG_F(ERROR, "Failed to get board info: {}, usually it means that device has no such channels, "
                 "use get_board_descr method for the info about supported channels",
                 e.what ());
         }
@@ -310,8 +306,7 @@ static int get_string_value (
     {
         if (use_logger)
         {
-            Board::board_logger->error (
-                "Failed to get board info: {}, usually it means that device has no such channels, "
+            LOG_F(ERROR, "Failed to get board info: {}, usually it means that device has no such channels, "
                 "use get_board_descr method for the info about supported channels",
                 e.what ());
         }
@@ -336,7 +331,7 @@ static std::string get_preset_str (int preset)
     }
     else
     {
-        Board::board_logger->error ("unknown preset");
+        LOG_F(ERROR, "unknown preset");
     }
     return preset_str;
 }

@@ -71,12 +71,12 @@ int MuseBLED::prepare_session ()
 {
     if (!is_valid)
     {
-        safe_logger (spdlog::level::info, "only one MuseBLED per process is allowed");
+        LOG_F(INFO, "only one MuseBLED per process is allowed");
         return (int)BrainFlowExitCodes::ANOTHER_BOARD_IS_CREATED_ERROR;
     }
     if (params.serial_port.empty ())
     {
-        safe_logger (spdlog::level::err, "you need to specify dongle port");
+        LOG_F(ERROR, "you need to specify dongle port");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -92,21 +92,21 @@ void MuseBLED::read_thread ()
     int (*func_default) (void *) = (int (*) (void *))dll_loader->get_address ("get_data_default");
     if (func_default == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for get_data_default");
+        LOG_F(ERROR, "failed to get function address for get_data_default");
         state = (int)BrainFlowExitCodes::GENERAL_ERROR;
         return;
     }
     int (*func_aux) (void *) = (int (*) (void *))dll_loader->get_address ("get_data_aux");
     if (func_aux == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for get_data_aux");
+        LOG_F(ERROR, "failed to get function address for get_data_aux");
         state = (int)BrainFlowExitCodes::GENERAL_ERROR;
         return;
     }
     int (*func_anc) (void *) = (int (*) (void *))dll_loader->get_address ("get_data_anc");
     if (func_anc == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to get function address for get_data_anc");
+        LOG_F(ERROR, "failed to get function address for get_data_anc");
         state = (int)BrainFlowExitCodes::GENERAL_ERROR;
         return;
     }
@@ -115,7 +115,7 @@ void MuseBLED::read_thread ()
     double *data_default = new double[num_rows_default];
     if (data_default == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to allocate data");
+        LOG_F(ERROR, "failed to allocate data");
         state = (int)BrainFlowExitCodes::GENERAL_ERROR;
         return;
     }
@@ -128,7 +128,7 @@ void MuseBLED::read_thread ()
     double *data_aux = new double[num_rows_aux];
     if (data_aux == NULL)
     {
-        safe_logger (spdlog::level::err, "failed to allocate data");
+        LOG_F(ERROR, "failed to allocate data");
         state = (int)BrainFlowExitCodes::GENERAL_ERROR;
         return;
     }
@@ -144,7 +144,7 @@ void MuseBLED::read_thread ()
         data_anc = new double[num_rows_anc];
         if (data_anc == NULL)
         {
-            safe_logger (spdlog::level::err, "failed to allocate data");
+            LOG_F(ERROR, "failed to allocate data");
             state = (int)BrainFlowExitCodes::GENERAL_ERROR;
             return;
         }
@@ -190,7 +190,7 @@ void MuseBLED::read_thread ()
             }
             if (num_attempts == max_attempts)
             {
-                safe_logger (spdlog::level::err, "no data received");
+                LOG_F(ERROR, "no data received");
                 {
                     std::lock_guard<std::mutex> lk (m);
                     state = (int)BrainFlowExitCodes::GENERAL_ERROR;

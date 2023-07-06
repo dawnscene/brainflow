@@ -14,6 +14,8 @@
 
 #include "json.hpp"
 
+#include "loguru.hpp"
+
 using json = nlohmann::json;
 
 /// BoardShim class to communicate with a board
@@ -30,12 +32,13 @@ public:
     /// enable BrainFlow logger with LEVEL_TRACE
     static void enable_dev_board_logger ();
     /// redirect BrainFlow logger from stderr to file
-    static void set_log_file (std::string log_file);
+    static void add_log_file (std::string log_file, loguru::FileMode mode = loguru::FileMode::Append, loguru::Verbosity verbosity = loguru::NamedVerbosity::Verbosity_INFO);
     /// use set_log_level only if you want to write your own log messages to BrainFlow logger
     static void set_log_level (int log_level);
     /// write user defined string to BrainFlow logger
     static void log_message (int log_level, const char *format, ...);
-
+    /// set callback to forward logger to main program
+	static void add_callback (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity);
     /**
      * get board description as json
      * @param board_id board id of your device

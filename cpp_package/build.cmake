@@ -27,6 +27,7 @@ target_include_directories (
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data_handler/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/cpp_package/src/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/json
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/loguru
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ml/inc
 )
 

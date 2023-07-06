@@ -30,12 +30,12 @@ int StreamingBoard::prepare_session ()
 {
     if (initialized)
     {
-        safe_logger (spdlog::level::info, "Session is already prepared");
+        LOG_F(INFO, "Session is already prepared");
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     if (params.master_board == (int)BoardIds::NO_BOARD)
     {
-        safe_logger (spdlog::level::err, "Master board id is not provided");
+        LOG_F(ERROR, "Master board id is not provided");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
     try
@@ -45,15 +45,15 @@ int StreamingBoard::prepare_session ()
     }
     catch (json::exception &e)
     {
-        safe_logger (spdlog::level::err, "Invalid json for master board");
-        safe_logger (spdlog::level::err, e.what ());
+        LOG_F(ERROR, "Invalid json for master board");
+        LOG_F(ERROR, e.what ());
         return (int)BrainFlowExitCodes::GENERAL_ERROR;
     }
     catch (const std::exception &e)
     {
-        safe_logger (spdlog::level::err,
+        LOG_F(ERROR,
             "Write board id for the board which streams data to other_info field");
-        safe_logger (spdlog::level::err, e.what ());
+        LOG_F(ERROR, e.what ());
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -66,7 +66,7 @@ int StreamingBoard::prepare_session ()
     }
     if ((!params.ip_address.empty ()) != (params.ip_port != 0))
     {
-        safe_logger (spdlog::level::warn, "ip_address or ip_port is not specified");
+        LOG_F(WARNING, "ip_address or ip_port is not specified");
     }
     // aux preset
     if ((!params.ip_address_aux.empty ()) && (params.ip_port_aux != 0))
@@ -78,7 +78,7 @@ int StreamingBoard::prepare_session ()
     }
     if ((!params.ip_address_aux.empty ()) != (params.ip_port_aux != 0))
     {
-        safe_logger (spdlog::level::warn, "ip_address_aux or ip_port_aux is not specified");
+        LOG_F(WARNING, "ip_address_aux or ip_port_aux is not specified");
     }
     // anc preset
     if ((!params.ip_address_anc.empty ()) && (params.ip_port_anc != 0))
@@ -90,12 +90,12 @@ int StreamingBoard::prepare_session ()
     }
     if ((!params.ip_address_anc.empty ()) != (params.ip_port_anc != 0))
     {
-        safe_logger (spdlog::level::warn, "ip_address_anc or ip_port_anc is not specified");
+        LOG_F(WARNING, "ip_address_anc or ip_port_anc is not specified");
     }
 
     if (clients.empty ())
     {
-        safe_logger (spdlog::level::err, "No ip addresses and ports specified");
+        LOG_F(ERROR, "No ip addresses and ports specified");
         return (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR;
     }
 
@@ -136,7 +136,7 @@ int StreamingBoard::start_stream (int buffer_size, const char *streamer_params)
 {
     if (keep_alive)
     {
-        safe_logger (spdlog::level::err, "Streaming thread already running");
+        LOG_F(ERROR, "Streaming thread already running");
         return (int)BrainFlowExitCodes::STREAM_ALREADY_RUN_ERROR;
     }
     int res = prepare_for_acquisition (buffer_size, streamer_params);
@@ -196,7 +196,7 @@ void StreamingBoard::read_thread (int num)
     std::string preset_str = preset_to_string (presets[num]);
     if (board_descr.find (preset_str) == board_descr.end ())
     {
-        safe_logger (spdlog::level::err, "invalid json or push_package args, no such key");
+        LOG_F(ERROR, "invalid json or push_package args, no such key");
         return;
     }
 
@@ -216,8 +216,7 @@ void StreamingBoard::read_thread (int num)
         int res = clients[num]->recv (transaction, bytes_per_recv);
         if (res != bytes_per_recv)
         {
-            safe_logger (
-                spdlog::level::trace, "unable to read {} bytes, read {}", bytes_per_recv, res);
+            LOG_F(2, "unable to read {} bytes, read {}", bytes_per_recv, res);
             log_socket_error (-1);
             continue;
         }
@@ -232,9 +231,9 @@ void StreamingBoard::read_thread (int num)
 void StreamingBoard::log_socket_error (int error_code)
 {
 #ifdef _WIN32
-    safe_logger (spdlog::level::err, "WSAGetLastError is {}", WSAGetLastError ());
+    LOG_F(ERROR, "WSAGetLastError is {}", WSAGetLastError ());
 #else
-    safe_logger (spdlog::level::err, "errno {} message {}", errno, strerror (errno));
+    LOG_F(ERROR, "errno {} message {}", errno, strerror (errno));
 #endif
-    safe_logger (spdlog::level::err, "socket operation error code: {}", error_code);
+    LOG_F(ERROR, "socket operation error code: {}", error_code);
 }
