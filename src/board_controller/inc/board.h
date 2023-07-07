@@ -24,7 +24,7 @@ public:
     static JNIEnv *java_jnienv; // nullptr unless on java
     static int set_log_level (int log_level);
     static int add_log_file (const char *log_file, loguru::FileMode mode, loguru::Verbosity verbosity);
-    static int add_callback (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity);
+    static int add_log_callback (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity);
 
     virtual ~Board ()
     {

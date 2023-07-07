@@ -55,7 +55,7 @@ void BoardShim::enable_dev_board_logger ()
     BoardShim::set_log_level ((int)LogLevels::LEVEL_TRACE);
 }
 
-void BoardShim::add_log_file (std::string log_file, loguru::FileMode mode, loguru::Verbosity verbosity)
+void BoardShim::add_log_file (std::string log_file, int mode, int verbosity)
 {
     int res = ::add_log_file_board_controller (log_file.c_str (), mode, verbosity);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
@@ -88,8 +88,8 @@ void BoardShim::log_message (int log_level, const char *format, ...)
     }
 }
 
-void BoardShim::add_callback (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity) {
-    int res = ::add_callback_board_controller (id, callback, user_data, verbosity);
+void BoardShim::add_log_callback (std::string id, void (*callback)(), void* user_data, int verbosity) {
+    int res = ::add_log_callback_board_controller (id.c_str(), callback, user_data, verbosity);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to add callback", res);

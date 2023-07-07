@@ -77,7 +77,7 @@ int Board::add_log_file (const char *log_file, loguru::FileMode mode, loguru::Ve
 #endif
 }
 
-int Board::add_callback(const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity)
+int Board::add_log_callback(const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity)
 {
 #ifdef __ANDROID__
     LOG_F(ERROR, "For Android add_callback is unavailable");

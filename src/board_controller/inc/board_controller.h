@@ -47,10 +47,9 @@ extern "C"
 
     // logging methods
     SHARED_EXPORT int CALLING_CONVENTION set_log_level_board_controller (int log_level);
-    SHARED_EXPORT int CALLING_CONVENTION add_log_file_board_controller (const char *log_file, loguru::FileMode mode, loguru::Verbosity verbosity);
+    SHARED_EXPORT int CALLING_CONVENTION add_log_file_board_controller (const char* log_file, int mode = 1, int verbosity = 0);
     SHARED_EXPORT int CALLING_CONVENTION log_message_board_controller (int log_level, char *message);
-    SHARED_EXPORT int CALLING_CONVENTION add_callback_board_controller (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity);
-
+    SHARED_EXPORT int CALLING_CONVENTION add_log_callback_board_controller (const char* id, void (*callback)(), void* user_data, int verbosity);
 
     // platform types and methods
     typedef const struct JNINativeInterface *JNIEnv; // A handle to use Java's JNI

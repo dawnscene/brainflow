@@ -342,6 +342,7 @@ ASALocalRun/
 .vscode/
 
 installed*
+install/
 compiled/
 python/flowcat.egg-info/
 .Rproj.user

@@ -428,15 +428,15 @@ int log_message_board_controller (int log_level, char *log_message)
     return (int)BrainFlowExitCodes::STATUS_OK;
 }
 
-int add_log_file_board_controller (const char *log_file, loguru::FileMode mode, loguru::Verbosity verbosity)
+int add_log_file_board_controller (const char *log_file, int mode, int verbosity)
 {
     std::lock_guard<std::mutex> lock (mutex);
-    return Board::add_log_file (log_file, mode, verbosity);
+    return Board::add_log_file (log_file, (loguru::FileMode)mode, (loguru::Verbosity)verbosity);
 }
 
-int  add_callback_board_controller (const char* id, loguru::log_handler_t callback, void* user_data, loguru::Verbosity verbosity) {
+int  add_log_callback_board_controller (const char* id, void (*callback)(), void* user_data, int verbosity) {
     std::lock_guard<std::mutex> lock (mutex);
-    return Board::add_callback (id, callback, user_data, verbosity);
+    return Board::add_log_callback (id, (loguru::log_handler_t)callback, user_data, (loguru::Verbosity)verbosity);
 }
 
 
