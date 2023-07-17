@@ -168,7 +168,8 @@ int OSSerial::set_serial_port_settings (int ms_timeout, bool timeout_only)
 
     if (tcsetattr (this->port_descriptor, TCSANOW, &port_settings) != 0)
         return SerialExitCodes::SET_PORT_STATE_ERROR;
-    tcflush (this->port_descriptor, TCIOFLUSH);
+    if (!timeout_only)
+        tcflush (this->port_descriptor, TCIOFLUSH);
     return SerialExitCodes::OK;
 }
 

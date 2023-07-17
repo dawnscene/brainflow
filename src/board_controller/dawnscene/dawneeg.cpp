@@ -521,6 +521,8 @@ std::string DawnEEG::read_serial_response ()
     int tmp_id = 0;
     while (serial->read_from_serial_port (&tmp, 1) == 1) // read 1 byte from serial port
     {
+        if (tmp_id == 0)
+                serial->set_serial_port_settings (100, true);
         if (tmp_id < max_tmp_size)
         {
             tmp_array[tmp_id] = tmp;
@@ -535,6 +537,7 @@ std::string DawnEEG::read_serial_response ()
     tmp_id = (tmp_id == max_tmp_size) ? tmp_id - 1 : tmp_id;
     tmp_array[tmp_id] = '\0';
 
+    serial->set_serial_port_settings (params.timeout, true);
     return std::string ((const char *)tmp_array);
 }
 
