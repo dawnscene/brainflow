@@ -88,8 +88,10 @@ void BoardShim::log_message (int log_level, const char *format, ...)
     }
 }
 
-void BoardShim::add_log_callback (std::string id, void (*callback)(), void* user_data, int verbosity) {
-    int res = ::add_log_callback_board_controller (id.c_str(), callback, user_data, verbosity);
+void BoardShim::add_log_callback (
+    std::string id, void (*callback) (), void *user_data, int verbosity)
+{
+    int res = ::add_log_callback_board_controller (id.c_str (), callback, user_data, verbosity);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to add callback", res);
@@ -209,15 +211,17 @@ BrainFlowArray<double, 2> BoardShim::get_board_data (int num_datapoints, int pre
     }
     int num_samples = std::min (get_board_data_count (preset), num_datapoints);
     int num_data_channels = get_num_rows (get_board_id (), preset);
-    double *buf = new double[num_samples * num_data_channels];
+    //    double *buf = new double[num_samples * num_data_channels];
+    BrainFlowArray<double, 2> matrix (num_data_channels, num_samples);
+    double *buf = matrix.get_raw_ptr ();
     int res = ::get_board_data (num_samples, preset, buf, board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
-        delete[] buf;
+        //        delete[] buf;
         throw BrainFlowException ("failed to get board data", res);
     }
-    BrainFlowArray<double, 2> matrix (buf, num_data_channels, num_samples);
-    delete[] buf;
+    //    BrainFlowArray<double, 2> matrix (buf, num_data_channels, num_samples);
+    //    delete[] buf;
     return matrix;
 }
 
