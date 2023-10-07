@@ -21,7 +21,7 @@
 #define DAWNEEG_CHAR_TIME_SYNC_RESPONSE '>'
 
 #define DAWNEEG_STREAM_HEADER 0xA0
-#define DAWNEEG_STREAM_FOOTER 0xC6
+#define DAWNEEG_STREAM_FOOTER 0xC0
 
 DawnEEG::DawnEEG (int board_id, struct BrainFlowInputParams params)
     : Board (board_id, params)
@@ -338,8 +338,16 @@ int DawnEEG::soft_reset() {
                 if (response.find("DawnEEG8") == std::string::npos && response.find("DawnEEG") == std::string::npos)
                     return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
                 break;
+            case (int)BoardIds::DAWNEEG12_BOARD:
+                if (response.find("DawnEEG12") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
+                break;
             case (int)BoardIds::DAWNEEG16_BOARD:
                 if (response.find("DawnEEG16") == std::string::npos)
+                    return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
+                break;
+            case (int)BoardIds::DAWNEEG18_BOARD:
+                if (response.find("DawnEEG18") == std::string::npos)
                     return (int)BrainFlowExitCodes::INITIAL_MSG_ERROR;
                 break;
             case (int)BoardIds::DAWNEEG24_BOARD:
@@ -383,7 +391,7 @@ int DawnEEG::default_config () {
 #define NUM_HEADER_BYTES 1
 #define NUM_SAMPLE_NUMBER_BYTES 1
 #define NUM_DATA_BYTES_PER_CHANNEL 3
-#define NUM_AUX_BYTES 6
+#define NUM_AUX_BYTES 7
 #define NUM_FOOTER_BYTES 1
 void DawnEEG::read_thread ()
 {
@@ -398,8 +406,8 @@ void DawnEEG::read_thread ()
         Bytes 18-20: Data value for EEG channel 6
         Bytes 21-23: Data value for EEG channel 6
         Bytes 24-26: Data value for EEG channel 8
-        Aux Data Bytes 27-32: 6 bytes of data
-        Byte 33: 0xC6
+        Aux Data Bytes 27-33: 7 bytes of data
+        Byte 34: 0xC0
     */
     int result;
     int num_eeg_channels = board_descr["default"]["num_eeg_channels"];
@@ -407,14 +415,22 @@ void DawnEEG::read_thread ()
     unsigned char *buf = new unsigned char[buf_length];
 
     int num_rows = board_descr["default"]["num_rows"];
+    int num_rows_aux = board_descr["auxiliary"]["num_rows"];
 
     double *package = new double[num_rows];
+    double *package_aux = new double[num_rows_aux];
 
     for (int i = 0; i < num_rows; i++)
     {
         package[i] = 0.0;
     }
+    for (int i = 0; i < num_rows_aux; i++)
+    {
+        package_aux[i] = 0.0;
+    }
+
     std::vector<int> eeg_channels = board_descr["default"]["eeg_channels"];
+    std::vector<int> temperature_channels = board_descr["auxiliary"]["temperature_channels"];
 
     while (keep_alive)
     {
@@ -461,7 +477,9 @@ void DawnEEG::read_thread ()
         }
 
         // package num
-        package[board_descr["default"]["package_num_channel"].get<int> ()] = (double)buf[0];
+        int package_num = buf[0];
+        package[board_descr["default"]["package_num_channel"].get<int> ()] = (double)package_num;
+
         // eeg
         for (unsigned int i = 0; i < eeg_channels.size (); i++)
         {
@@ -470,14 +488,51 @@ void DawnEEG::read_thread ()
             package[eeg_channels[i]] = eeg_scale * cast_24bit_to_int32 (buf + 1 + 3 * i);
         }
 
-//        package[board_descr["default"]["timestamp_channel"].get<int> ()] = get_timestamp ();
+        // timestamp
         double device_timestamp = 
             ((buf[buf_length - 5] << 24) | (buf[buf_length - 4] << 16) | (buf[buf_length - 3] << 8) | (buf[buf_length - 2])) / 1000.0   // millisecond part
             + (((buf[buf_length - 7] & 0x03) << 8) | (buf[buf_length - 6])) / 1000000.0;  // microsecond part
         package[board_descr["default"]["timestamp_channel"].get<int> ()] = device_timestamp + time_correction;
 
+        // marker & triggers
+        package[board_descr["default"]["marker_channel"].get<int> ()] =
+            (buf[buf_length - 7] >> 4) & 0x0F;
+        package[board_descr["default"]["trigger1_channel"].get<int> ()] =
+            (buf[buf_length - 7] >> 2) & 0x01;
+        package[board_descr["default"]["trigger2_channel"].get<int> ()] =
+            (buf[buf_length - 7] >> 3) & 0x01;
 
         push_package (package);
+
+        if (package_num % 8 == 0)
+        {
+            package_num_aux = (double)(package_num / 8);
+            battery_temperature = 0.0;
+            battery_voltage = 0.0;
+            package_aux[board_descr["auxiliary"]["package_num_channel"].get<int> ()] =
+                package_num_aux;
+            package_aux[board_descr["auxiliary"]["timestamp_channel"].get<int> ()] =
+                device_timestamp + time_correction;
+            package_aux[board_descr["auxiliary"]["marker_channel"].get<int> ()] =
+                (buf[buf_length - 7] >> 4) & 0x0F;
+            battery_temperature = buf[buf_length - 8] * 256; // temperature MSB
+        }
+        else if (package_num % 8 == 1)
+        {
+            battery_temperature += buf[buf_length - 8]; // temperature LSB
+            package_aux[temperature_channels[0]] = battery_temperature;
+        }
+        else if (package_num % 8 == 2)
+        {
+            battery_voltage = buf[buf_length - 8] * 256; // voltage MSB
+        }
+        else if (package_num % 8 == 3)
+        {
+            battery_voltage += buf[buf_length - 8]; // voltage LSB
+            package_aux[board_descr["auxiliary"]["battery_channel"].get<int> ()] =
+                battery_voltage / 1000.0;
+            push_package (package_aux, (int)BrainFlowPresets::AUXILIARY_PRESET);
+        }
     }
     delete[] package;
     delete[] buf;
@@ -615,7 +670,13 @@ DawnEEG6::DawnEEG6 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds
 DawnEEG8::DawnEEG8 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG8_BOARD, params) {
 }
 
+DawnEEG12::DawnEEG12 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG12_BOARD, params) {
+}
+
 DawnEEG16::DawnEEG16 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG16_BOARD, params) {
+}
+
+DawnEEG18::DawnEEG18 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG18_BOARD, params) {
 }
 
 DawnEEG24::DawnEEG24 (struct BrainFlowInputParams params) : DawnEEG ((int)BoardIds::DAWNEEG24_BOARD, params) {

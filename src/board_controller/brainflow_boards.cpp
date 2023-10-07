@@ -875,9 +875,22 @@ BrainFlowBoards::BrainFlowBoards()
         {"package_num_channel", 0},
         {"timestamp_channel", 5},
         {"marker_channel", 6},
-        {"num_rows", 7},
+        {"trigger1_channel", 7},
+        {"trigger2_channel", 8},
+        {"num_rows", 9},
         {"num_eeg_channels", 4},
         {"eeg_channels", {1, 2, 3, 4}}
+    };
+    brainflow_boards_json["boards"]["48"]["auxiliary"] =
+    {
+        {"name", "DawnEEG4"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
     };
     brainflow_boards_json["boards"]["49"]["default"] =
     {
@@ -886,9 +899,22 @@ BrainFlowBoards::BrainFlowBoards()
         {"package_num_channel", 0},
         {"timestamp_channel", 7},
         {"marker_channel", 8},
-        {"num_rows", 9},
+        {"trigger1_channel", 9},
+        {"trigger2_channel", 10},
+        {"num_rows", 11},
         {"num_eeg_channels", 6},
         {"eeg_channels", {1, 2, 3, 4, 5, 6}}
+    };
+    brainflow_boards_json["boards"]["49"]["auxiliary"] =
+    {
+        {"name", "DawnEEG6"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
     };
     brainflow_boards_json["boards"]["50"]["default"] =
     {
@@ -897,42 +923,142 @@ BrainFlowBoards::BrainFlowBoards()
         {"package_num_channel", 0},
         {"timestamp_channel", 9},
         {"marker_channel", 10},
-        {"num_rows", 11},
+        {"trigger1_channel", 11},
+        {"trigger2_channel", 12},
+        {"num_rows", 13},
         {"num_eeg_channels", 8},
         {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8}}
     };
+    brainflow_boards_json["boards"]["50"]["auxiliary"] =
+    {
+        {"name", "DawnEEG8"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
+    };
     brainflow_boards_json["boards"]["51"]["default"] =
+    {
+        {"name", "DawnEEG12"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 13},
+        {"marker_channel", 14},
+        {"trigger1_channel", 15},
+        {"trigger2_channel", 16},
+        {"num_rows", 17},
+        {"num_eeg_channels", 16},
+        {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}}
+    };
+    brainflow_boards_json["boards"]["51"]["auxiliary"] =
+    {
+        {"name", "DawnEEG12"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
+    };
+    brainflow_boards_json["boards"]["52"]["default"] =
     {
         {"name", "DawnEEG16"},
         {"sampling_rate", 250},
         {"package_num_channel", 0},
         {"timestamp_channel", 17},
         {"marker_channel", 18},
-        {"num_rows", 19},
+        {"trigger1_channel", 19},
+        {"trigger2_channel", 20},
+        {"num_rows", 21},
         {"num_eeg_channels", 16},
         {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}}
     };
-    brainflow_boards_json["boards"]["52"]["default"] =
+    brainflow_boards_json["boards"]["52"]["auxiliary"] =
+    {
+        {"name", "DawnEEG16"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
+    };
+    brainflow_boards_json["boards"]["53"]["default"] =
+    {
+        {"name", "DawnEEG18"},
+        {"sampling_rate", 250},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 19},
+        {"marker_channel", 20},
+        {"trigger1_channel", 22},
+        {"trigger2_channel", 23},
+        {"num_rows", 24},
+        {"num_eeg_channels", 16},
+        {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18}}
+    };
+    brainflow_boards_json["boards"]["53"]["auxiliary"] =
+    {
+        {"name", "DawnEEG18"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
+    };
+    brainflow_boards_json["boards"]["54"]["default"] =
     {
         {"name", "DawnEEG24"},
         {"sampling_rate", 250},
         {"package_num_channel", 0},
         {"timestamp_channel", 25},
         {"marker_channel", 26},
-        {"num_rows", 27},
+        {"trigger1_channel", 27},
+        {"trigger2_channel", 28},
+        {"num_rows", 29},
         {"num_eeg_channels", 24},
         {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}}
     };
-    brainflow_boards_json["boards"]["53"]["default"] =
+    brainflow_boards_json["boards"]["54"]["auxiliary"] =
+    {
+        {"name", "DawnEEG24"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
+    };
+    brainflow_boards_json["boards"]["55"]["default"] =
     {
         {"name", "DawnEEG32"},
         {"sampling_rate", 250},
         {"package_num_channel", 0},
         {"timestamp_channel", 33},
         {"marker_channel", 34},
-        {"num_rows", 35},
+        {"trigger1_channel", 35},
+        {"trigger2_channel", 36},
+        {"num_rows", 37},
         {"num_eeg_channels", 32},
         {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}}
+    };
+    brainflow_boards_json["boards"]["55"]["auxiliary"] =
+    {
+        {"name", "DawnEEG32"},
+        {"sampling_rate", 32},
+        {"package_num_channel", 0},
+        {"timestamp_channel", 3},
+        {"marker_channel", 4},
+        {"num_rows", 5},
+        {"battery_channel", 1},
+        {"temperature_channels", {2}}
     };
 }
 

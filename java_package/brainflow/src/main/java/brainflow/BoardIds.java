@@ -59,9 +59,11 @@ public enum BoardIds
     DAWNEEG4_BOARD (48),
     DAWNEEG6_BOARD (49),
     DAWNEEG8_BOARD (50),
-    DAWNEEG16_BOARD (51),
-    DAWNEEG24_BOARD (52),
-    DAWNEEG32_BOARD (53);
+    DAWNEEG12_BOARD (51),
+    DAWNEEG16_BOARD (52),
+    DAWNEEG18_BOARD (code:53),
+    DAWNEEG24_BOARD (54),
+    DAWNEEG32_BOARD (55);
 
     private final int board_id;
     private static final Map<Integer, BoardIds> bi_map = new HashMap<Integer, BoardIds> ();

@@ -70,7 +70,7 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
 {
     std::lock_guard<std::mutex> lock (mutex);
 
-    LOG_F(INFO, "incoming json: {}", json_brainflow_input_params);
+    LOG_F (INFO, "incoming json: {}", json_brainflow_input_params);
     struct BrainFlowInputParams params;
     int res = string_to_brainflow_input_params (json_brainflow_input_params, &params);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
@@ -81,7 +81,7 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
     std::pair<int, struct BrainFlowInputParams> key = get_key (board_id, params);
     if (boards.find (key) != boards.end ())
     {
-        LOG_F(ERROR, "Board with id {} and the same config already exists", board_id);
+        LOG_F (ERROR, "Board with id {} and the same config already exists", board_id);
         return (int)BrainFlowExitCodes::ANOTHER_BOARD_IS_CREATED_ERROR;
     }
 
@@ -253,8 +253,14 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
         case BoardIds::DAWNEEG8_BOARD:
             board = std::shared_ptr<Board> (new DawnEEG8 (params));
             break;
+        case BoardIds::DAWNEEG12_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG12 (params));
+            break;
         case BoardIds::DAWNEEG16_BOARD:
             board = std::shared_ptr<Board> (new DawnEEG16 (params));
+            break;
+        case BoardIds::DAWNEEG18_BOARD:
+            board = std::shared_ptr<Board> (new DawnEEG18 (params));
             break;
         case BoardIds::DAWNEEG24_BOARD:
             board = std::shared_ptr<Board> (new DawnEEG24 (params));
@@ -265,7 +271,7 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
         default:
             return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
     }
-    LOG_F(1, "Board object created {}", board->get_board_id ());
+    LOG_F (1, "Board object created {}", board->get_board_id ());
     res = board->prepare_session ();
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {

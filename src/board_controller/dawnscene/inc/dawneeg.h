@@ -22,7 +22,9 @@ enum DAWNEEG_BOARD_CHANNELS {
     DAWNEEG32 = 32
 }; */
 
-#define DAWNEEG_BAUDRATE 115200
+#ifndef DAWNEEG_BAUDRATE
+#define DAWNEEG_BAUDRATE 2000000
+#endif
 
 class DawnEEG : public Board
 {
@@ -41,6 +43,10 @@ protected:
     volatile int state;
     volatile double half_rtt;
     volatile double time_correction;
+
+    volatile double package_num_aux;
+    volatile double battery_voltage;
+    volatile double battery_temperature;
 
     int init_board ();
     int soft_reset ();
@@ -78,9 +84,19 @@ class DawnEEG8 : public DawnEEG {
         DawnEEG8 (struct BrainFlowInputParams params);
 };
 
+class DawnEEG12 : public DawnEEG {
+    public:
+        DawnEEG12 (struct BrainFlowInputParams params);
+};
+
 class DawnEEG16 : public DawnEEG {
     public:
         DawnEEG16 (struct BrainFlowInputParams params);
+};
+
+class DawnEEG18 : public DawnEEG {
+    public:
+        DawnEEG18 (struct BrainFlowInputParams params);
 };
 
 class DawnEEG24 : public DawnEEG {
