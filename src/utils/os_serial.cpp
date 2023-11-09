@@ -162,6 +162,7 @@ int OSSerial::set_serial_port_settings (int ms_timeout, bool timeout_only)
         port_settings.c_iflag &= ~(ICANON | IXOFF | IXON | IXANY);
         port_settings.c_oflag = 0;
         port_settings.c_lflag = 0;
+        port_settings.c_cflag |= CRTSCTS;
     }
     port_settings.c_cc[VMIN] = 0;
     port_settings.c_cc[VTIME] = ms_timeout / 100; // vtime is in tenths of a second

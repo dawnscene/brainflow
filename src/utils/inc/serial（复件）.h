@@ -35,5 +35,4 @@ public:
     virtual int send_to_serial_port (const void *message, int length) = 0;
     virtual int close_serial_port () = 0;
     virtual const char *get_port_name () = 0;
-    virtual int set_RTS (bool rts) = 0;
 };

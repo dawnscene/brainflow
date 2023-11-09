@@ -32,6 +32,7 @@ std::string params_to_string (struct BrainFlowInputParams params)
     j["file_aux"] = params.file_aux;
     j["file_anc"] = params.file_anc;
     j["master_board"] = params.master_board;
+    j["serial_baudrate"] = params.serial_baudrate;
     std::string post_str = j.dump ();
     return post_str;
 }
@@ -292,7 +293,7 @@ json BoardShim::get_board_descr (int board_id, int preset)
 {
     char board_descr_str[16000];
     int string_len = 0;
-    int res = ::get_board_descr (board_id, preset, board_descr_str, &string_len);
+    int res = ::get_boad_descr (board_id, preset, board_descr_str, &string_len);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to get board info", res);

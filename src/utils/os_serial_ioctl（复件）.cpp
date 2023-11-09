@@ -104,22 +104,6 @@ int OSSerial::set_custom_baudrate (int baudrate)
         return SerialExitCodes::SET_PORT_STATE_ERROR;
     }
 }
-
-int OSSerial::set_RTS (bool rts)
-{
-    int status;
-    ioctl (this->port_descriptor, TIOCMGET, &status);
-    if (rts)
-    {
-        status &= ~TIOCM_RTS;
-    }
-    else
-    {
-        status |= TIOCM_RTS;
-    }
-    ioctl (this->port_descriptor, TIOCMSET, &status);
-}
-
 #endif
 #elif defined(__APPLE__)
 int OSSerial::set_custom_latency (int latency)

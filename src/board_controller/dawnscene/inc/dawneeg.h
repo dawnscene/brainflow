@@ -8,8 +8,18 @@
 
 #include "board.h"
 #include "board_controller.h"
-#include "serial.h"
 #include "dawneeg_config_tracker.h"
+#include <SerialPort.h>
+
+
+#ifdef _WIN32
+#define sleep(sec) Sleep (sec * 1000)
+#define msleep(msec) Sleep (msec)
+#else
+#define msleep(msec) usleep (msec * 1000)
+#endif
+
+using namespace LibSerial;
 
 /*
 enum DAWNEEG_BOARD_CHANNELS {
@@ -22,8 +32,8 @@ enum DAWNEEG_BOARD_CHANNELS {
     DAWNEEG32 = 32
 }; */
 
-#ifndef DAWNEEG_BAUDRATE
-#define DAWNEEG_BAUDRATE 2000000
+#ifndef DAWNEEG_DEFAULT_BAUDRATE
+#define DAWNEEG_DEFAULT_BAUDRATE BaudRate::BAUD_2000000
 #endif
 
 class DawnEEG : public Board
@@ -36,7 +46,7 @@ protected:
     int board_type;
 
     std::thread streaming_thread;
-    Serial *serial;
+    SerialPort *serial;
     DawnEEG_ConfigTracker config_tracker;
     std::mutex m;
     std::condition_variable cv;
@@ -48,15 +58,19 @@ protected:
     volatile double battery_voltage;
     volatile double battery_temperature;
 
+    int open_port ();
     int init_board ();
     int soft_reset ();
     int default_config ();
-
-    int send_to_board (const char *msg);
-    int send_to_board (const char *msg, std::string &response);
-    std::string read_serial_response ();
-    void read_thread ();
     int time_sync ();
+
+    void read_thread ();
+
+    int send (const std::string &msg);
+    int recv (std::string &response);
+    int send_receive (const std::string &msg, std::string &response);
+    int reset_RTS ();
+    int flush ();
 
 public:
     DawnEEG (int board_id, struct BrainFlowInputParams params);
@@ -69,42 +83,50 @@ public:
     int config_board (std::string config, std::string &response);
 };
 
-class DawnEEG4 : public DawnEEG {
-    public:
-        DawnEEG4 (struct BrainFlowInputParams params);
+class DawnEEG4 : public DawnEEG
+{
+public:
+    DawnEEG4 (struct BrainFlowInputParams params);
 };
 
-class DawnEEG6 : public DawnEEG {
-    public:
-        DawnEEG6 (struct BrainFlowInputParams params);
+class DawnEEG6 : public DawnEEG
+{
+public:
+    DawnEEG6 (struct BrainFlowInputParams params);
 };
 
-class DawnEEG8 : public DawnEEG {
-    public:
-        DawnEEG8 (struct BrainFlowInputParams params);
+class DawnEEG8 : public DawnEEG
+{
+public:
+    DawnEEG8 (struct BrainFlowInputParams params);
 };
 
-class DawnEEG12 : public DawnEEG {
-    public:
-        DawnEEG12 (struct BrainFlowInputParams params);
+class DawnEEG12 : public DawnEEG
+{
+public:
+    DawnEEG12 (struct BrainFlowInputParams params);
 };
 
-class DawnEEG16 : public DawnEEG {
-    public:
-        DawnEEG16 (struct BrainFlowInputParams params);
+class DawnEEG16 : public DawnEEG
+{
+public:
+    DawnEEG16 (struct BrainFlowInputParams params);
 };
 
-class DawnEEG18 : public DawnEEG {
-    public:
-        DawnEEG18 (struct BrainFlowInputParams params);
+class DawnEEG18 : public DawnEEG
+{
+public:
+    DawnEEG18 (struct BrainFlowInputParams params);
 };
 
-class DawnEEG24 : public DawnEEG {
-    public:
-        DawnEEG24 (struct BrainFlowInputParams params);
+class DawnEEG24 : public DawnEEG
+{
+public:
+    DawnEEG24 (struct BrainFlowInputParams params);
 };
 
-class DawnEEG32 : public DawnEEG {
-    public:
-        DawnEEG32 (struct BrainFlowInputParams params);
+class DawnEEG32 : public DawnEEG
+{
+public:
+    DawnEEG32 (struct BrainFlowInputParams params);
 };

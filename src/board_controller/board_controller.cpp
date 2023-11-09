@@ -269,6 +269,7 @@ int prepare_session (int board_id, const char *json_brainflow_input_params)
             board = std::shared_ptr<Board> (new DawnEEG32 (params));
             break;
         default:
+            LOG_F (ERROR, "Board ID {} not supported", board_id);
             return (int)BrainFlowExitCodes::UNSUPPORTED_BOARD_ERROR;
     }
     LOG_F (1, "Board object created {}", board->get_board_id ());
@@ -595,6 +596,7 @@ int string_to_brainflow_input_params (
         params->file_aux = config["file_aux"];
         params->file_anc = config["file_anc"];
         params->master_board = config["master_board"];
+        params->serial_baudrate = config["serial_baudrate"];
         return (int)BrainFlowExitCodes::STATUS_OK;
     }
     catch (json::exception &e)

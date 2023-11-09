@@ -950,7 +950,7 @@ BrainFlowBoards::BrainFlowBoards()
         {"trigger1_channel", 15},
         {"trigger2_channel", 16},
         {"num_rows", 17},
-        {"num_eeg_channels", 16},
+        {"num_eeg_channels", 12},
         {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}}
     };
     brainflow_boards_json["boards"]["51"]["auxiliary"] =
@@ -995,10 +995,10 @@ BrainFlowBoards::BrainFlowBoards()
         {"package_num_channel", 0},
         {"timestamp_channel", 19},
         {"marker_channel", 20},
-        {"trigger1_channel", 22},
-        {"trigger2_channel", 23},
-        {"num_rows", 24},
-        {"num_eeg_channels", 16},
+        {"trigger1_channel", 21},
+        {"trigger2_channel", 22},
+        {"num_rows", 23},
+        {"num_eeg_channels", 18},
         {"eeg_channels", {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18}}
     };
     brainflow_boards_json["boards"]["53"]["auxiliary"] =

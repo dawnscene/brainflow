@@ -26,7 +26,6 @@ public:
     int read_from_serial_port (void *bytes_to_read, int size);
     int send_to_serial_port (const void *message, int length);
     int close_serial_port ();
-    int set_RTS (bool);
     const char *get_port_name ()
     {
         return port_name;

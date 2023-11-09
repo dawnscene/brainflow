@@ -134,6 +134,7 @@ target_include_directories (
     ${CMAKE_CURRENT_SOURCE_DIR}/src/board_controller/mentalab/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/board_controller/emotibit/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/board_controller/dawnscene/inc
+    ${libserial_INCLUDE_DIRS}/libserial
 )
 
 target_compile_definitions(${BOARD_CONTROLLER_NAME} PRIVATE NOMINMAX BRAINFLOW_VERSION=${BRAINFLOW_VERSION})
@@ -229,7 +230,8 @@ if (ANDROID)
     target_link_libraries (${BOARD_CONTROLLER_NAME} PRIVATE log)
 endif (ANDROID)
 
-target_link_libraries (${BOARD_CONTROLLER_NAME} PRIVATE fmt::fmt-header-only)
+target_link_libraries(${BOARD_CONTROLLER_NAME} PRIVATE PkgConfig::libserial)
+target_link_libraries (${BOARD_CONTROLLER_NAME} PRIVATE fmt::fmt-header-only )
 
 install (
     FILES

@@ -42,6 +42,9 @@ endif (WARNINGS_AS_ERRORS)
 
 find_package(fmt)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(libserial REQUIRED IMPORTED_TARGET libserial)
+
 include (${CMAKE_CURRENT_SOURCE_DIR}/src/board_controller/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/src/data_handler/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/src/ml/build.cmake)
